@@ -408,7 +408,7 @@ export function createStage(canvas, hooks = {}) {
     vertexShader: `uniform float uPx; attribute float aSize; varying vec3 vC; void main(){ vC=color; vec4 mv=modelViewMatrix*vec4(position,1.); gl_Position=projectionMatrix*mv; gl_PointSize=uPx*aSize*27./-mv.z; }`,
     fragmentShader: `varying vec3 vC; void main(){ float d=length(gl_PointCoord-.5); float a=smoothstep(.5,.08,d); gl_FragColor=vec4(vC*a,a); }`,
   }));
-  tCol.set(tColB); taiji.frustumCulled = false; fig.add(taiji);
+  tCol.set(tColW); taiji.frustumCulled = false; fig.add(taiji);
   const rayO = V(), rayD = V(), rayP = V(); let rayOn = 0, raySpeed = 0;
   function updateTaiji(dt) {
     const cs = Math.cos(S.spin), sn = Math.sin(S.spin), K = 13, DAMP = 2.9, RM = .16;
@@ -471,7 +471,7 @@ export function createStage(canvas, hooks = {}) {
 
   // ---------- state & interaction
   const S = {
-    mode: 'taiji', form: 'taiji', shown: '', tech: 'all', focus: 'hero', scroll: 0, mobile: false,
+    mode: 'taiji', form: 'xingyi', shown: '', tech: 'all', focus: 'hero', scroll: 0, mobile: false,
     mx: 0, my: 0, px: 0, py: 0, spin: 0, vel: 0, ringSpin: 0, drag: false, lastX: 0, dragMoved: 0,
     wDisc: 1, wRing: 1, wWx: 0, wArc: 1, wTrail: .55, wSignal: 0, wExo: 0, ex: 3.7, ey: .8, es: 1, sigT: 0, sigI: 0,
   };
