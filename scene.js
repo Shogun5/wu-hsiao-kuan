@@ -248,8 +248,8 @@ export function createStage(canvas, hooks = {}) {
     HJ = f.j; trails.forEach(([, l]) => { l.userData.fresh = true; });
     tCol.set(eff() === 'xingyi' ? tColW : tColB); tGeo.attributes.color.needsUpdate = true;
   }
-  // 太極: the scan re-posed to a captured frame; 形意: the scan as it was taken (三體式); 八卦: the captured mannequin
-  loadForm('taiji', 'taiji'); loadForm('xingyi', 'scan'); loadForm('bagua', 'figure');
+  // 太極: the scan re-posed to a captured frame; 形意: the scan as it was taken (三體式); 八卦: the scan re-posed to frame 809
+  loadForm('taiji', 'taiji'); loadForm('xingyi', 'scan'); loadForm('bagua', 'bagua');
   const VERT = 7, vertebrae = Array.from({ length: VERT }, (_, i) => { const m = new THREE.Mesh(new THREE.BoxGeometry(.075 - i * .004, .04, .055), boneMat); fig.add(m); return m; });
   const ribs = [];
   // exoskeleton (輔助科技): frames beside thigh and shank, actuator discs at hip and knee, a pelvic band
