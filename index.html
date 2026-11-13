@@ -1,0 +1,206 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>吳孝觀 ｜ 探索人體動作，創新智慧健康科技</title>
+<meta name="description" content="吳孝觀 Wu, Hsiao-Kuan, PT, PhD — 國立臺北護理健康大學運動保健系專任助理教授。物理治療、醫療輔具研發、內家拳。">
+<meta name="theme-color" content="#0d0f0e">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@300;500;900&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Ma+Shan+Zheng&text=%E4%BA%BA%E9%AA%A8%E5%BF%83%E5%B7%A5%E6%AD%A6%E6%96%87%E4%BF%A1&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@300;400&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+<script type="importmap">
+{ "imports": { "three": "https://cdn.jsdelivr.net/npm/three@0.169.0/build/three.module.js" } }
+</script>
+</head>
+<body data-focus="hero">
+
+<canvas id="stage" aria-hidden="true"></canvas>
+<div class="veil" aria-hidden="true"></div>
+
+<nav class="nav">
+  <a class="brand" href="#top" aria-label="回到頂端"><span class="seal">孝觀</span><span class="brand-name">吳孝觀</span></a>
+  <div class="links">
+    <a href="#about" data-note="0">其人</a>
+    <a href="#spec" data-note="1">研究</a>
+    <a href="#work" data-note="2">成果</a>
+    <a href="#pubs" data-note="3">著作</a>
+    <a href="#contact" data-note="4">聯絡</a>
+  </div>
+  <button id="sound" class="sound" type="button" aria-pressed="false" title="開啟／關閉音效"><span class="dot"></span>聲<i>OFF</i></button>
+</nav>
+
+<header class="hero" id="top">
+  <p class="hero-meta reveal">國立臺北護理健康大學　運動保健系　專任助理教授</p>
+  <h1 class="reveal" aria-label="吳孝觀"><span>吳</span><span>孝</span><span>觀</span></h1>
+  <p class="latin reveal">WU, HSIAO-KUAN <i>PT, PhD</i></p>
+  <p class="motto reveal">探索人體動作，創新智慧健康科技</p>
+  <p class="fields reveal">運動科學 × 復健醫學 × 智慧感測 × 人工智慧</p>
+  <div class="vert" aria-hidden="true">以科學理解人體動作　以科技提升健康生活</div>
+  <p class="hint"><span class="hint-mouse">拖曳太極力板　·　點擊八卦</span><span class="hint-touch">輕點太極力板與八卦</span></p>
+  <div class="scroll-cue" aria-hidden="true"></div>
+</header>
+
+<main>
+
+<section id="about" class="sec">
+  <div class="glyph" aria-hidden="true">人</div>
+  <div class="sec-head reveal"><span class="num">壹</span><h2>其人</h2><span class="en">ABOUT</span></div>
+  <div class="about-grid">
+    <figure class="portrait reveal"><img src="assets/portrait.jpg" alt="吳孝觀" onerror="this.closest('figure').remove()"></figure>
+    <div class="col reveal">
+      <h3>現職</h3>
+      <p class="lead">國立臺北護理健康大學<br>運動保健系 專任助理教授</p>
+      <h3>學歷</h3>
+      <ul class="plain">
+        <li>國立陽明大學 物理治療學暨輔助科技學系 <b>博士</b></li>
+        <li>國立陽明大學 物理治療學暨輔助科技學系 <b>碩士</b></li>
+        <li>國立陽明大學 物理治療學系 <b>學士</b></li>
+      </ul>
+      <h3>專業證照</h3>
+      <ul class="plain">
+        <li>物理治療師證照</li>
+        <li>3D 列印工程師證照</li>
+        <li>LabVIEW CLAD 證照</li>
+      </ul>
+    </div>
+    <div class="col reveal">
+      <h3>經歷</h3>
+      <ol class="path">
+        <li><b>國立陽明交通大學</b>物理治療學暨輔助科技學系 兼任助理教授</li>
+        <li><b>國立陽明交通大學</b>創客空間 博士後研究</li>
+        <li><b>國立陽明大學</b>醫工中心 專案經理</li>
+        <li><b>國立體育大學</b>適應體育學系 兼任講師</li>
+        <li><b>宸安復健科診所</b>物理治療師</li>
+        <li><b>沅昇復健科診所</b>物理治療師</li>
+        <li><b>漢銘醫院</b>物理治療師</li>
+      </ol>
+    </div>
+  </div>
+</section>
+
+<section id="spec" class="sec sec-stage">
+  <div class="glyph" aria-hidden="true">骨</div>
+  <div class="stage-gap" aria-hidden="true"></div>
+  <div class="stage-body">
+    <div class="sec-head reveal"><span class="num">貳</span><h2>研究</h2><span class="en">RESEARCH &amp; INNOVATION</span></div>
+    <p class="intro reveal">融合運動生物力學、復健科學與人工智慧，透過人體動作分析、智慧感測、虛擬實境與穿戴式科技，發展精準量測與健康促進技術，致力於將跨領域研究成果轉化為實際應用。</p>
+    <div class="pillars reveal" role="tablist" aria-label="四大核心研究領域">
+      <div class="pillar on" data-tech="ortho" role="tab" tabindex="0"><i>01</i><b>運動生物力學與人體動作分析</b><span>SPORTS BIOMECHANICS &amp; HUMAN MOVEMENT ANALYSIS</span><div class="pillar-more"><p>聚焦人體動作過程中的運動學、動力學及神經肌肉控制機制，透過動作分析、力學量測與訊號處理技術，探討動作效率、關節負荷及運動傷害風險。研究內容涵蓋脊椎力學特性、關節活動度、姿勢控制、肌肉骨骼系統負荷，以及深蹲、跳躍、步態等功能性動作的生物力學分析；特別著重於開發具備客觀性、可靠性及可重複性的量測技術。</p></div></div>
+      <div class="pillar" data-tech="signal" role="tab" tabindex="0"><i>02</i><b>智慧感測與復健科技</b><span>SMART SENSING &amp; REHABILITATION TECHNOLOGY</span><div class="pillar-more"><p>運用感測器、微控制器、電腦視覺及資料分析技術，研發創新的人體動作量測與復健輔助系統。研究包含多軸機械式組織特性量測裝置（JAMTD）、穿戴式動作感測、AI 影像姿態辨識，以及結合 MediaPipe 與 Python 的人體動作分析工具，發展低成本、可攜式且易於操作的智慧健康技術。</p></div></div>
+      <div class="pillar" data-tech="motion" role="tab" tabindex="0"><i>03</i><b>神經肌肉控制、平衡與身心健康</b><span>NEUROMUSCULAR CONTROL, BALANCE &amp; MIND-BODY HEALTH</span><div class="pillar-more"><p>探索感覺整合、姿勢控制及神經生理活動與人體平衡能力之間的關係。透過虛擬實境（VR）掃頻平衡評估、太極拳訓練、腦波（EEG）及功能性近紅外光譜（fNIRS）等技術，研究姿勢穩定性、神經調控、注意力及身心介入的生理反應，結合傳統身心運動與現代神經科學。</p></div></div>
+      <div class="pillar" data-tech="assist" role="tab" tabindex="0"><i>04</i><b>輔助科技與智慧健康應用</b><span>ASSISTIVE TECHNOLOGY &amp; SMART HEALTHCARE</span><div class="pillar-more"><p>著重復健輔助設備、智慧穿戴科技與人機互動系統的應用研究，探索科技如何協助改善動作能力、提升活動參與及生活品質。研究方向涵蓋外骨骼輔助設備、動作回饋系統、互動式復健訓練，以及結合行動裝置的健康監測與運動分析平台，從概念驗證、原型開發到實際場域應用。</p></div></div>
+    </div>
+  </div>
+</section>
+
+<section id="idea" class="sec">
+  <div class="glyph" aria-hidden="true">心</div>
+  <div class="sec-head reveal"><span class="num">參</span><h2>理念</h2><span class="en">RESEARCH PHILOSOPHY</span></div>
+  <blockquote class="creed reveal">以科學理解人體動作，<br>以科技提升健康生活。</blockquote>
+  <div class="idea-grid">
+    <p class="reveal">致力於整合運動生物力學、物理治療、復健醫學與智慧科技，探索人體動作控制、神經肌肉功能及運動表現的科學機制，並透過跨領域技術研發，促進運動科學與健康照護的創新應用。</p>
+    <p class="reveal">研究方向結合人體動作分析、智慧感測技術、虛擬實境、人工智慧及穿戴式輔助設備，建立客觀、量化且具臨床應用價值的評估方法，將實驗室研究延伸至臨床復健、運動訓練及社區健康促進等實際場域。</p>
+  </div>
+  <h3 class="reveal">研究與技術特色　RESEARCH HIGHLIGHTS</h3>
+  <ol class="highlights">
+    <li class="reveal"><i>01</i><b>跨領域整合</b><span>INTERDISCIPLINARY INTEGRATION</span><p>結合物理治療、運動科學、工程技術與資訊科技，從人體功能需求出發，發展創新研究方法與技術。</p></li>
+    <li class="reveal"><i>02</i><b>量化評估</b><span>QUANTITATIVE ASSESSMENT</span><p>重視測量工具的信度、效度與生物力學意義，以客觀數據建立科學化評估模式。</p></li>
+    <li class="reveal"><i>03</i><b>智慧科技應用</b><span>INTELLIGENT TECHNOLOGY</span><p>整合 AI、電腦視覺、VR、穿戴式感測器與資料視覺化技術，提升動作分析及健康監測能力。</p></li>
+    <li class="reveal"><i>04</i><b>實務導向研發</b><span>TRANSLATIONAL RESEARCH</span><p>將研究成果轉化為可應用於臨床、運動訓練、教育及社區健康促進的技術與工具。</p></li>
+    <li class="reveal"><i>05</i><b>國際學術合作</b><span>INTERNATIONAL COLLABORATION</span><p>透過國際研究交流、跨校合作及學生海外實習，推動智慧健康與運動科技領域的國際合作與人才培育。</p></li>
+  </ol>
+  <div class="vision reveal">
+    <h3>研究願景　RESEARCH VISION</h3>
+    <p>未來將持續整合運動生物力學、人工智慧與智慧感測技術，發展以人體功能為核心的精準評估及個人化健康促進系統；期望建立從基礎研究、技術開發、功能驗證到臨床及社區應用的完整研究架構，促進運動科學與智慧健康科技的永續發展。</p>
+    <p class="vision-line">以人體動作為核心，以科學研究為基礎，以創新科技連結健康的未來。</p>
+  </div>
+</section>
+
+<section id="work" class="sec">
+  <div class="glyph" aria-hidden="true">工</div>
+  <div class="sec-head reveal"><span class="num">肆</span><h2>成果</h2><span class="en">FEATURED RESEARCH &amp; DEVELOPMENT</span></div>
+
+  <div class="works">
+    <article class="work reveal" data-note="5">
+      <div class="work-img"><img src="assets/work1.jpg" alt="" onerror="this.remove()"><span>01</span></div>
+      <h3>巴金森氏症患者之<br>視覺提醒輔具</h3>
+      <p>可個人化設定視覺提示的儀器化助行器，用於巴金森氏症患者步態訓練。</p>
+      <a href="https://doi.org/10.1080/10400435.2018.1525442" target="_blank" rel="noopener">Assistive Technology, 2020 ↗</a>
+    </article>
+    <article class="work reveal" data-note="6">
+      <div class="work-img"><img src="assets/work2.jpg" alt="" onerror="this.remove()"><span>02</span></div>
+      <h3>關節附屬動作<br>量測儀</h3>
+      <p>客觀、可攜式的脊椎關節附屬動作量測裝置，已取得臺灣與美國發明專利。</p>
+      <a href="https://doi.org/10.3390/s20010100" target="_blank" rel="noopener">Sensors, 2019 ↗</a>
+    </article>
+    <article class="work reveal" data-note="7">
+      <div class="work-img"><img src="assets/work3.jpg" alt="" onerror="this.remove()"><span>03</span></div>
+      <h3>前方跟隨之<br>機器侍從</h3>
+      <p>以使用者局部座標為基礎的隨行機器人，配合日常生活中的自然動作。</p>
+      <a href="https://doi.org/10.3390/s21113889" target="_blank" rel="noopener">Sensors, 2021 ↗</a>
+    </article>
+  </div>
+
+  <div class="featured reveal">
+    <h3>精選研究主題　FEATURED RESEARCH</h3>
+    <ol class="feat">
+      <li data-note="4"><i>01</i><b>JAMTD 脊椎組織力學量測</b><span>多軸量測、節段位移與剛性、信度分析</span></li>
+      <li data-note="5"><i>02</i><b>VR 掃頻平衡與太極拳訓練</b><span>姿勢控制、動態平衡與介入成效</span></li>
+      <li data-note="6"><i>03</i><b>智慧人體動作分析平台</b><span>步態、深蹲、跳躍及運動技能的 AI 影像分析</span></li>
+      <li data-note="7"><i>04</i><b>神經生理與身心運動研究</b><span>EEG、fNIRS、靜坐與神經肌肉控制</span></li>
+      <li data-note="8"><i>05</i><b>外骨骼與復健輔助科技</b><span>智慧輔具、穿戴式回饋與人體功能促進</span></li>
+    </ol>
+  </div>
+
+  <div class="skills reveal">
+    <h3>因開發需求而不斷學習的工程專長</h3>
+    <ul class="chips" id="skills"></ul>
+  </div>
+
+  <details class="more reveal">
+    <summary>其他曾協助開發之研究程式 <i id="prog-count"></i></summary>
+    <ol class="cols" id="programs"></ol>
+  </details>
+</section>
+
+<section id="pubs" class="sec">
+  <div class="glyph" aria-hidden="true">文</div>
+  <div class="sec-head reveal"><span class="num">伍</span><h2>著作</h2><span class="en">PUBLICATIONS &amp; PATENTS</span></div>
+  <div class="tally reveal" id="tally"></div>
+  <div id="pub-lists"></div>
+</section>
+
+<section id="wu" class="sec sec-stage">
+  <div class="glyph" aria-hidden="true">武</div>
+  <div class="stage-gap" aria-hidden="true"></div>
+  <div class="stage-body">
+    <div class="sec-head reveal"><span class="num">陸</span><h2>修身</h2><span class="en">INTERNAL MARTIAL ARTS　內家拳</span></div>
+    <p class="big reveal">習武逾 <b>20</b> 年</p>
+    <p class="intro reveal">學習中華武術終南形意八卦門派內家拳（太極拳、形意拳、八卦掌）逾 20 年，致力於探索內家拳學理論與應用，盼能推廣此傳統健身運動。</p>
+    <div class="arts reveal" role="tablist" aria-label="內家三拳">
+      <button type="button" class="art on" data-mode="taiji" role="tab"><b>太極拳</b><span>陰陽</span></button>
+      <button type="button" class="art" data-mode="xingyi" role="tab"><b>形意拳</b><span>五行</span></button>
+      <button type="button" class="art" data-mode="bagua" role="tab"><b>八卦掌</b><span>八卦</span></button>
+    </div>
+  </div>
+</section>
+
+<section id="contact" class="sec sec-contact">
+  <div class="glyph" aria-hidden="true">信</div>
+  <div class="sec-head reveal"><span class="num">柒</span><h2>聯絡</h2><span class="en">CONTACT</span></div>
+  <a class="mail reveal" href="mailto:hsiaokuan@ntunhs.edu.tw">hsiaokuan@ntunhs.edu.tw</a>
+  <p class="addr reveal">臺北市北投區明德路 365 號<br>國立臺北護理健康大學 運動保健系</p>
+</section>
+
+</main>
+
+<footer class="foot"><span class="seal">孝觀</span><span>© 吳孝觀 Wu, Hsiao-Kuan</span></footer>
+
+<script src="content.js"></script>
+<script type="module" src="main.js"></script>
+</body>
+</html>
