@@ -154,16 +154,18 @@ export function createStage(canvas, hooks = {}) {
 
   // wuxing pentagon (形意五行) takes the halo's place
   const wuxing = new THREE.Group(); halo.add(wuxing); wuxing.scale.setScalar(0);
+  const WXC = { 火: '#d8452b', 土: '#d9a441', 金: '#9aa3a0', 水: '#3f78bd', 木: '#4f9e5c' };
   const label = ch => {
     const c = document.createElement('canvas'); c.width = c.height = 256; const x = c.getContext('2d');
     x.fillStyle = '#ece5d6'; x.beginPath(); x.arc(128, 128, 120, 0, 7); x.fill();
+    x.strokeStyle = WXC[ch]; x.lineWidth = 20; x.beginPath(); x.arc(128, 128, 108, 0, 7); x.stroke();
     x.fillStyle = '#0f1211'; x.font = '900 150px "Noto Serif TC",serif'; x.textAlign = 'center'; x.textBaseline = 'middle'; x.fillText(ch, 128, 138);
     const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 4; return t;
   };
   const WX = ['火', '土', '金', '水', '木'], wxPts = [], wxNodes = [];
   WX.forEach((ch, i) => {
     const a = i / 5 * Math.PI * 2, p = V(Math.sin(a) * 2.55, Math.cos(a) * 2.55, 0); wxPts.push(p);
-    const m = new THREE.Mesh(new THREE.CircleGeometry(.48, 48), basic(0xffffff)); m.position.copy(p); m.position.z = .02; m.userData.ch = ch;
+    const m = new THREE.Mesh(new THREE.CircleGeometry(.48, 48), basic(0xffffff)); m.position.copy(p); m.position.z = .02; m.userData.ch = ch; m.userData.wx = i; m.userData.pulse = 0;
     wuxing.add(m); wxNodes.push(m);
   });
   const paintLabels = () => wxNodes.forEach(m => { m.material.map?.dispose(); m.material.map = label(m.userData.ch); m.material.needsUpdate = true; });
@@ -171,6 +173,24 @@ export function createStage(canvas, hooks = {}) {
   document.fonts?.ready.then(() => document.fonts.load('900 150px "Noto Serif TC"', WX.join('')).then(paintLabels)).catch(() => {});
   wuxing.add(new THREE.LineLoop(new THREE.BufferGeometry().setFromPoints([0, 2, 4, 1, 3].map(i => wxPts[i])), new THREE.LineBasicMaterial({ color: RED })));
   wuxing.add(new THREE.Mesh(new THREE.TorusGeometry(2.55, .01, 8, 160), basic(PAPER)));
+  // 相生 runs round the circle (火→土→金→水→木), 相剋 along the star (火→金→木→土→水)
+  const wxSheng = new THREE.Mesh(new THREE.CircleGeometry(.1, 24), basic(TECH)), wxKe = new THREE.Mesh(new THREE.CircleGeometry(.075, 24), basic(RED));
+  const WXTAIL = 40, tailPos = new Float32Array(WXTAIL * 3), tailGeo = new THREE.BufferGeometry(); tailGeo.setAttribute('position', new THREE.BufferAttribute(tailPos, 3));
+  wuxing.add(wxSheng, wxKe, new THREE.Line(tailGeo, new THREE.LineBasicMaterial({ color: TECH })));
+  const KE = [0, 2, 4, 1, 3];
+  function updateWuxing(t, dt) {
+    const ph = (t * .42) % 5;
+    for (let i = 0; i < WXTAIL; i++) { const a = (ph - i * .012) / 5 * Math.PI * 2; tailPos[i * 3] = Math.sin(a) * 2.55; tailPos[i * 3 + 1] = Math.cos(a) * 2.55; tailPos[i * 3 + 2] = .03; }
+    tailGeo.attributes.position.needsUpdate = true;
+    wxSheng.position.set(tailPos[0], tailPos[1], .04);
+    const kp = (t * .3) % 5, ki = Math.floor(kp), kf = kp - ki, e = kf * kf * (3 - 2 * kf);
+    wxKe.position.copy(wxPts[KE[ki]]).lerp(wxPts[KE[(ki + 1) % 5]], e); wxKe.position.z = .04;
+    wxNodes.forEach((n, i) => {
+      const d = Math.abs(ph - i), near = Math.max(0, 1 - Math.min(d, 5 - d) * 2.2), hit = Math.max(0, 1 - Math.hypot(wxKe.position.x - wxPts[i].x, wxKe.position.y - wxPts[i].y) * 2.5);
+      n.userData.pulse = Math.max(0, n.userData.pulse - dt * 1.2);
+      n.scale.setScalar(1 + .2 * near + .12 * hit + .35 * n.userData.pulse);
+    });
+  }
 
   // ---------- the figure (metres, scaled ×2). x = its right, z = forward.
   const fig = new THREE.Group(); fig.position.y = FLOOR; fig.scale.setScalar(2); emblem.add(fig);
@@ -200,26 +220,35 @@ export function createStage(canvas, hooks = {}) {
   const human = new THREE.Group(); fig.add(human); let HJ = null;
   const MP_EDGES = [[0, 1], [1, 2], [2, 3], [3, 7], [0, 4], [4, 5], [5, 6], [6, 8], [9, 10], [11, 12], [11, 13], [13, 15], [15, 17], [15, 19], [15, 21], [17, 19],
     [12, 14], [14, 16], [16, 18], [16, 20], [16, 22], [18, 20], [11, 23], [12, 24], [23, 24], [23, 25], [24, 26], [25, 27], [26, 28], [27, 29], [28, 30], [29, 31], [30, 32], [27, 31], [28, 32]];
-  Promise.all([
-    fetch('assets/figure.json').then(r => r.json()),
-    import('three/addons/loaders/GLTFLoader.js').then(m => new m.GLTFLoader().loadAsync('assets/figure.glb')),
+  const forms = {}, skinMat = new THREE.MeshStandardMaterial({ color: 0x566260, roughness: .58, metalness: .2 });
+  const lineMat = new THREE.MeshBasicMaterial({ color: TECH, depthTest: false, transparent: true, opacity: .95 });
+  const dotMat = new THREE.MeshBasicMaterial({ color: PAPER, depthTest: false, transparent: true });
+  const cyl = new THREE.CylinderGeometry(.0042, .0042, 1, 6), gltfLoader = import('three/addons/loaders/GLTFLoader.js').then(m => new m.GLTFLoader());
+  const loadForm = (name, base) => Promise.all([
+    fetch(`assets/${base}.json`).then(r => r.json()),
+    gltfLoader.then(l => l.loadAsync(`assets/${base}.glb`)),
   ]).then(([j, gltf]) => {
-    const skinMat = new THREE.MeshStandardMaterial({ color: 0x566260, roughness: .58, metalness: .2 });
+    const g = new THREE.Group(); g.visible = false; human.add(g);
     gltf.scene.traverse(o => { if (o.isMesh) o.material = skinMat; });
-    human.add(gltf.scene);
-    [...bones, head, visor, eye, chest, core, pelvis, ...hands, ...feet, ...vertebrae, markers].forEach(o => { if (o) o.visible = false; });
-    const lineMat = new THREE.MeshBasicMaterial({ color: TECH, depthTest: false, transparent: true, opacity: .95 });
-    const dotMat = new THREE.MeshBasicMaterial({ color: PAPER, depthTest: false, transparent: true });
-    const pts = j.mp.map(p => V(p[0], p[1], p[2])), cyl = new THREE.CylinderGeometry(.0042, .0042, 1, 6);
+    g.add(gltf.scene);
+    const pts = j.mp.map(p => V(p[0], p[1], p[2]));
     MP_EDGES.forEach(([a, b]) => {
       const d = pts[b].clone().sub(pts[a]), m = new THREE.Mesh(cyl, lineMat);
-      m.position.copy(pts[a]).addScaledVector(d, .5); m.scale.y = d.length(); m.quaternion.setFromUnitVectors(up, d.normalize()); m.renderOrder = 5; human.add(m);
+      m.position.copy(pts[a]).addScaledVector(d, .5); m.scale.y = d.length(); m.quaternion.setFromUnitVectors(up, d.normalize()); m.renderOrder = 5; g.add(m);
     });
     const dots = new THREE.InstancedMesh(new THREE.SphereGeometry(1, 12, 8), dotMat, pts.length);
     pts.forEach((p, i) => { const r = i < 11 ? .007 : .015; mtx.makeScale(r, r, r).setPosition(p); dots.setMatrixAt(i, mtx); });
-    dots.renderOrder = 6; dots.frustumCulled = false; human.add(dots);
-    HJ = j;
-  }).catch(e => console.warn('figure model unavailable, showing the built-in robot instead', e));
+    dots.renderOrder = 6; dots.frustumCulled = false; g.add(dots);
+    forms[name] = { g, j }; applyForm();
+  }).catch(e => console.warn('figure model unavailable: ' + base, e));
+  function applyForm() {
+    const f = forms[S.form] || Object.values(forms)[0]; if (!f) return;
+    [...bones, head, visor, eye, chest, core, pelvis, ...hands, ...feet, ...vertebrae, markers].forEach(o => { if (o) o.visible = false; });
+    Object.values(forms).forEach(o => { o.g.visible = o === f; });
+    HJ = f.j; trails.forEach(([, l]) => { l.userData.fresh = true; });
+    tCol.set(S.form === 'wuxing' ? tColW : tColB); tGeo.attributes.color.needsUpdate = true;
+  }
+  loadForm('wuxing', 'scan'); loadForm('bagua', 'figure');
   const VERT = 7, vertebrae = Array.from({ length: VERT }, (_, i) => { const m = new THREE.Mesh(new THREE.BoxGeometry(.075 - i * .004, .04, .055), boneMat); fig.add(m); return m; });
   const ribs = [];
   // exoskeleton (輔助科技): frames beside thigh and shank, actuator discs at hip and knee, a pelvic band
@@ -250,7 +279,7 @@ export function createStage(canvas, hooks = {}) {
       for (const n of ['pel', 'neck', 'head', 'shR', 'shL', 'elR', 'elL', 'hipR', 'hipL', 'knR', 'knL', 'anR', 'anL', 'toR', 'toL']) J[n].fromArray(HJ[n]);
       J.haR.fromArray(HJ.wrR); J.haL.fromArray(HJ.wrL);
       // the taiji sits between the two palms, sized to the gap between them
-      ballC.copy(J.haR).add(J.haL).multiplyScalar(.5); ballC.y += Math.sin(t * 1.1) * .004;
+      ballC.copy(J.haR).add(J.haL).multiplyScalar(.5); ballC.y += Math.sin(t * 1.1) * .004; ballC.z += HJ.ballZ || 0;
       BS = THREE.MathUtils.clamp(J.haR.distanceTo(J.haL) * .36, .11, .2) / RB;
     } else {
     const br = Math.sin(t * 1.1), sway = Math.sin(t * .37) * .35, yaw = 0;
@@ -304,7 +333,7 @@ export function createStage(canvas, hooks = {}) {
       l.geometry.attributes.position.needsUpdate = true;
     });
     // centre of pressure follows the weight shift (plate space: x right, y = -z)
-    cop.position.x = J.pel.x * 2 * 9 + Math.sin(t * 2.3) * .02; cop.position.y = -(.06 + .03 * Math.sin(t * .53)) * 2;
+    cop.position.x = J.pel.x * 2 + Math.sin(t * 2.3) * .02 + Math.sin(t * .37) * .07; cop.position.y = -(J.pel.z + .06 + .03 * Math.sin(t * .53)) * 2;
     copPos.copyWithin(3, 0, (COPN - 1) * 3); copPos[0] = cop.position.x; copPos[1] = cop.position.y; copPos[2] = .011;
     copGeo.attributes.position.needsUpdate = true;
   }
@@ -357,15 +386,18 @@ export function createStage(canvas, hooks = {}) {
   galaxy.frustumCulled = false; emblem.add(galaxy);
 
   // ---------- the taiji the robot holds: a ball of particles on springs. Push it and it scatters, then gathers again.
+  const WXRGB = [[.95, .3, .18], [.92, .68, .24], [.93, .92, .88], [.3, .55, .92], [.36, .78, .45]];
   const NT = reduce ? 1500 : small ? 3200 : 6000, RB = .2, tr = rng(33);
-  const tHome = new Float32Array(NT * 3), tPos = new Float32Array(NT * 3), tVel = new Float32Array(NT * 3), tCol = new Float32Array(NT * 3), tSize = new Float32Array(NT);
+  const tHome = new Float32Array(NT * 3), tPos = new Float32Array(NT * 3), tVel = new Float32Array(NT * 3), tCol = new Float32Array(NT * 3), tColB = new Float32Array(NT * 3), tColW = new Float32Array(NT * 3), tSize = new Float32Array(NT);
   for (let i = 0; i < NT; i++) {
     let x, y, z; do { x = tr() * 2 - 1; y = tr() * 2 - 1; z = tr() * 2 - 1; } while (x * x + y * y + z * z > 1);
     z *= .5;                                                    // a lens, so the yin-yang reads from the front
     const up_ = Math.hypot(x, y - .5), dn = Math.hypot(x, y + .5);
     let yang = x > 0; if (up_ < .5) yang = true; if (dn < .5) yang = false; if (up_ < .16) yang = false; if (dn < .16) yang = true;
     tHome.set([x * RB, y * RB, z * RB], i * 3);
-    const b = .6 + tr() * .4; tCol.set(yang ? [.95 * b, .92 * b, .85 * b] : [.98 * b, .7 * b, .2 * b], i * 3); tSize[i] = (yang ? 1 : .8) * (.6 + tr());
+    const b = .6 + tr() * .4; tColB.set(yang ? [.95 * b, .92 * b, .85 * b] : [.98 * b, .7 * b, .2 * b], i * 3);
+    const w = WXRGB[Math.floor(((Math.atan2(x, y) / (Math.PI * 2) + 1.1) % 1) * 5)], core_ = Math.hypot(x, y) < .22;
+    tColW.set(core_ ? [.95 * b, .92 * b, .85 * b] : [w[0] * b * 1.25, w[1] * b * 1.25, w[2] * b * 1.25], i * 3); tSize[i] = (yang ? 1 : .8) * (.6 + tr());
     tPos.set([(tr() - .5) * 3, tr() * 2, (tr() - .5) * 3], i * 3);   // they fly in from everywhere on load
   }
   const tGeo = new THREE.BufferGeometry();
@@ -375,7 +407,7 @@ export function createStage(canvas, hooks = {}) {
     vertexShader: `uniform float uPx; attribute float aSize; varying vec3 vC; void main(){ vC=color; vec4 mv=modelViewMatrix*vec4(position,1.); gl_Position=projectionMatrix*mv; gl_PointSize=uPx*aSize*27./-mv.z; }`,
     fragmentShader: `varying vec3 vC; void main(){ float d=length(gl_PointCoord-.5); float a=smoothstep(.5,.08,d); gl_FragColor=vec4(vC*a,a); }`,
   }));
-  taiji.frustumCulled = false; fig.add(taiji);
+  tCol.set(tColW); taiji.frustumCulled = false; fig.add(taiji);
   const rayO = V(), rayD = V(), rayP = V(); let rayOn = 0, raySpeed = 0;
   function updateTaiji(dt) {
     const cs = Math.cos(S.spin), sn = Math.sin(S.spin), K = 13, DAMP = 2.9, RM = .16;
@@ -438,7 +470,7 @@ export function createStage(canvas, hooks = {}) {
 
   // ---------- state & interaction
   const S = {
-    mode: 'taiji', tech: 'all', focus: 'hero', scroll: 0, mobile: false,
+    mode: 'taiji', form: 'wuxing', tech: 'all', focus: 'hero', scroll: 0, mobile: false,
     mx: 0, my: 0, px: 0, py: 0, spin: 0, vel: 0, ringSpin: 0, drag: false, lastX: 0, dragMoved: 0,
     wDisc: 1, wRing: 1, wWx: 0, wArc: 1, wTrail: .55, wSignal: 0, wExo: 0, ex: 3.7, ey: .8, es: 1, sigT: 0, sigI: 0,
   };
@@ -464,7 +496,7 @@ export function createStage(canvas, hooks = {}) {
     if (S.drag) { const d = (e.clientX - S.lastX) * .012; S.lastX = e.clientX; S.spin += d; S.vel = lerp(S.vel, d * 60, .5); S.dragMoved += Math.abs(d); }
     else if (active() && e.pointerType === 'mouse') {
       setNdc(e); ray.setFromCamera(ndc, camera);
-      const over = S.wRing > .5 && ray.intersectObjects(hitPlates).length;
+      const over = (S.wRing > .5 && ray.intersectObjects(hitPlates).length) || (S.wWx > .5 && ray.intersectObjects(wxNodes).length);
       document.body.style.cursor = over && !isUi(e) ? 'grab' : '';
     }
   }, { passive: true });
@@ -474,6 +506,8 @@ export function createStage(canvas, hooks = {}) {
     setNdc(e); ray.setFromCamera(ndc, camera);
     const tri = S.wRing > .5 ? ray.intersectObjects(hitPlates)[0] : null;
     if (tri) { const i = tri.object.userData.tri; trigrams[i].userData.pulse = 1; S.vel += 3; hooks.onTrigram?.(i); return; }
+    const wx = S.wWx > .5 ? ray.intersectObjects(wxNodes)[0] : null;
+    if (wx) { const i = wx.object.userData.wx; wx.object.userData.pulse = 1; S.vel += 3; hooks.onTrigram?.(i); return; }
     S.vel += 4;
   });
   addEventListener('pointerup', () => {
@@ -510,8 +544,9 @@ export function createStage(canvas, hooks = {}) {
     S.ex = damp(S.ex, tx, 2.5, dt); S.ey = damp(S.ey, ty, 2.5, dt); S.es = damp(S.es, ts, 2.5, dt);
 
     const m = S.mode, k = S.tech;
-    S.wRing = damp(S.wRing, m === 'xingyi' ? 0 : m === 'bagua' ? 1.1 : 1, 4, dt);
-    S.wWx = damp(S.wWx, m === 'xingyi' ? 1 : 0, 4, dt);
+    const five = m === 'xingyi' || (m === 'taiji' && S.form === 'wuxing');
+    S.wRing = damp(S.wRing, five ? 0 : m === 'bagua' ? 1.1 : 1, 4, dt);
+    S.wWx = damp(S.wWx, five ? 1 : 0, 4, dt);
     S.wArc = damp(S.wArc, k === 'all' || k === 'ortho' || k === 'assist' ? 1 : 0, 5, dt);
     S.wTrail = damp(S.wTrail, k === 'motion' ? 1 : k === 'all' ? .55 : 0, 4, dt);
     S.wSignal = damp(S.wSignal, k === 'signal' ? 1 : k === 'assist' ? .45 : 0, 4, dt);
@@ -531,7 +566,7 @@ export function createStage(canvas, hooks = {}) {
     emblem.rotation.set(.15 + S.py * .12, -.3 + S.px * .34, 0);
     ring.rotation.z = S.ringSpin; ring.scale.setScalar(Math.max(S.wRing, .0001)); ring.visible = S.wRing > .01;
     wuxing.rotation.z = -S.ringSpin * .6; wuxing.scale.setScalar(Math.max(S.wWx, .0001)); wuxing.visible = S.wWx > .01;
-    wxNodes.forEach(n => { n.rotation.z = -wuxing.rotation.z; });
+    wxNodes.forEach(n => { n.rotation.z = -wuxing.rotation.z; }); if (wuxing.visible) updateWuxing(t, dt);
     trigrams.forEach(g => { const u = g.userData; if (u.pulse > 0 || !u.mat.color.equals(cPaper)) { u.pulse = Math.max(0, u.pulse - dt * .9); u.mat.color.copy(cPaper).lerp(cRed, u.pulse); g.scale.setScalar(1 + u.pulse * .16); } });
 
     pose(t);
@@ -562,6 +597,7 @@ export function createStage(canvas, hooks = {}) {
 
   return {
     setMode(m) { S.mode = m; },
+    setForm(f) { S.form = f; applyForm(); },
     setTech(k) { S.tech = k; },
     setFocus(f) { S.focus = f; if (f !== 'wu') S.mode = 'taiji'; if (f !== 'tech') S.tech = 'all'; },
     setScroll(v) { S.scroll = v; },
