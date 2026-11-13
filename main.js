@@ -11,6 +11,7 @@ try {
   stage = createStage($('#stage'), {
     onTrigram: i => sound.pluck(i + 2, .55),
     onSpin: v => sound.whoosh(v),
+    onStir: v => { const n = performance.now(); if (n - (window.__stirT || 0) > 700) { window.__stirT = n; sound.whoosh(4 + v * 2); sound.pluck(Math.floor(Math.random() * 5) + 4, .3); } },
     onBurst: () => sound.blip(587.33 * [1, 1.5, 2][Math.floor(Math.random() * 3)]),
   });
   window.__stage = stage;

@@ -119,7 +119,7 @@ export function createStage(canvas, hooks = {}) {
       }`,
   });
   const plate = new THREE.Group(); plate.position.y = FLOOR; plate.rotation.x = -Math.PI / 2; emblem.add(plate);
-  const disc = new THREE.Mesh(new THREE.CircleGeometry(1.7, 128), discMat); plate.add(disc);
+  const disc = new THREE.Mesh(new THREE.CircleGeometry(1.7, 64), new THREE.MeshBasicMaterial({ color: 0x0b0d0c, transparent: true, opacity: .55 })); plate.add(disc);
   // centre of pressure: dot + fading trace
   const cop = new THREE.Mesh(new THREE.CircleGeometry(.07, 24), basic(RED)); cop.position.z = .012; plate.add(cop);
   const COPN = 90, copPos = new Float32Array(COPN * 3), copGeo = new THREE.BufferGeometry();
@@ -127,7 +127,7 @@ export function createStage(canvas, hooks = {}) {
   plate.add(new THREE.Line(copGeo, new THREE.LineBasicMaterial({ color: RED })));
 
   // halo behind the figure: bagua (Fu Xi order) + tick scale + live signal ring
-  const halo = new THREE.Group(); halo.position.set(0, .45, -1); halo.scale.setScalar(.8); emblem.add(halo);
+  const HS = .54, halo = new THREE.Group(); halo.position.set(0, FLOOR + .02, 0); halo.rotation.x = -Math.PI / 2; halo.scale.setScalar(HS); emblem.add(halo);
   const TRI = [[1, 1, 1], [0, 1, 1], [0, 1, 0], [0, 0, 1], [0, 0, 0], [1, 0, 0], [1, 0, 1], [1, 1, 0]];
   const ring = new THREE.Group(); halo.add(ring);
   const R = 2.62, trigrams = [], hitPlates = [], hitMat = new THREE.MeshBasicMaterial({ visible: false });
@@ -178,13 +178,26 @@ export function createStage(canvas, hooks = {}) {
   const J = Object.fromEntries(NAMES.map(n => [n, V()]));
   const BONES = [['neck', 'shR'], ['neck', 'shL'], ['shR', 'elR'], ['elR', 'haR'], ['shL', 'elL'], ['elL', 'haL'],
     ['pel', 'hipR'], ['pel', 'hipL'], ['hipR', 'knR'], ['knR', 'anR'], ['anR', 'toR'], ['hipL', 'knL'], ['knL', 'anL'], ['anL', 'toL'], ['neck', 'head']];
-  const boneMat = basic(PAPER), boneGeo = new THREE.CylinderGeometry(.011, .011, 1, 8);
-  const bones = BONES.map(() => { const m = new THREE.Mesh(boneGeo, boneMat); fig.add(m); return m; });
-  const MARK = NAMES.filter(n => n !== 'head');
-  const markers = new THREE.InstancedMesh(new THREE.SphereGeometry(.024, 14, 10), basic(TECH), MARK.length); markers.frustumCulled = false; fig.add(markers);
-  const head = new THREE.Mesh(new THREE.IcosahedronGeometry(.1, 1), new THREE.MeshBasicMaterial({ color: PAPER, wireframe: true })); fig.add(head);
+  // a ceramic-shelled humanoid robot: lit shells, glowing joints, an exposed spine at the waist
+  emblem.add(new THREE.HemisphereLight(0xfff3e2, 0x1c2a28, 2.2));
+  const key = new THREE.DirectionalLight(0xfff6ea, 4.2); key.position.set(-3, 5, 6); emblem.add(key);
+  const rim = new THREE.DirectionalLight(TECH, 3.5); rim.position.set(4, 2, -5); emblem.add(rim);
+  const shell = new THREE.MeshStandardMaterial({ color: 0x7d8885, roughness: .36, metalness: .5 });
+  const dark = new THREE.MeshStandardMaterial({ color: 0x121615, roughness: .5, metalness: .6 });
+  const boneMat = dark, glow = basic(TECH);
+  const RAD = [0, 0, .04, .033, .04, .033, 0, 0, .056, .044, 0, .056, .044, 0, .028];
+  const bones = BONES.map((_, i) => { if (!RAD[i]) return null; const m = new THREE.Mesh(new THREE.CapsuleGeometry(RAD[i], 1, 6, 16), i === 14 ? dark : shell); fig.add(m); return m; });
+  const JR = { shR: .05, shL: .05, elR: .042, elL: .042, haR: .034, haL: .034, hipR: .06, hipL: .06, knR: .058, knL: .058, anR: .044, anL: .044 };
+  const MARK = Object.keys(JR);
+  const markers = new THREE.InstancedMesh(new THREE.SphereGeometry(1, 20, 14), glow, MARK.length); markers.frustumCulled = false; fig.add(markers);
+  const part = (geo, mat, sx = 1, sy = 1, sz = 1) => { const m = new THREE.Mesh(geo, mat); m.scale.set(sx, sy, sz); fig.add(m); return m; };
+  const ball = new THREE.SphereGeometry(1, 32, 20);
+  const head = part(ball, shell, .092, .108, .1), visor = part(new THREE.BoxGeometry(.13, .042, .05), dark), eye = part(new THREE.BoxGeometry(.1, .008, .01), glow);
+  const chest = part(ball, shell, .165, .14, .1), core = part(new THREE.CircleGeometry(.03, 24), glow), pelvis = part(ball, shell, .15, .075, .105);
+  const hands = [part(new THREE.BoxGeometry(.028, .1, .075), shell), part(new THREE.BoxGeometry(.028, .1, .075), shell)];
+  const feet = [part(new THREE.BoxGeometry(.095, .055, .25), shell), part(new THREE.BoxGeometry(.095, .055, .25), shell)];
   const VERT = 7, vertebrae = Array.from({ length: VERT }, (_, i) => { const m = new THREE.Mesh(new THREE.BoxGeometry(.075 - i * .004, .04, .055), boneMat); fig.add(m); return m; });
-  const ribs = [0, 1, 2].map(i => { const m = new THREE.Mesh(new THREE.TorusGeometry(.12 - i * .012, .005, 6, 40), boneMat); fig.add(m); return m; });
+  const ribs = [];
   // exoskeleton (輔助科技): frames beside thigh and shank, actuator discs at hip and knee, a pelvic band
   const exo = new THREE.Group(); exo.visible = false; fig.add(exo);
   const exoMat = new THREE.MeshBasicMaterial({ color: TECH, wireframe: true }), exoSolid = basic(TECH);
@@ -207,41 +220,38 @@ export function createStage(canvas, hooks = {}) {
   const A = { knee: 0, shoulder: 0, trunk: 0 };
   const spinePt = (u, yaw, sway, out) => out.set(-.035 * sway * Math.sin(Math.PI * u) + J.pel.x, J.pel.y + .05 + u * .5, J.pel.z + .025 * Math.sin(Math.PI * u) - .01);
 
+  const ballC = V();
   function pose(t) {
-    const w = t * .55, sway = Math.sin(w), yaw = .42 * Math.sin(w - .5);
-    J.pel.set(.11 * sway, .845 + .018 * Math.cos(w * 2), 0);
-    J.anR.set(.25, .07, .02); J.anL.set(-.25, .07, .02);
-    J.toR.set(.31, .015, .2); J.toL.set(-.31, .015, .2);
-    const hy = yaw * .45;
-    J.hipR.set(Math.cos(hy) * .1, -.03, -Math.sin(hy) * .1).add(J.pel);
-    J.hipL.set(-Math.cos(hy) * .1, -.03, Math.sin(hy) * .1).add(J.pel);
-    ik(J.hipR, J.anR, .44, .43, tmp.set(.3, 0, 1), J.knR);
-    ik(J.hipL, J.anL, .44, .43, tmp.set(-.3, 0, 1), J.knL);
+    const br = Math.sin(t * 1.1), sway = Math.sin(t * .37) * .35, yaw = 0;
+    J.pel.set(.012 * sway, .835 + .006 * br, -.02);
+    J.anR.set(.19, .075, 0); J.anL.set(-.19, .075, 0);
+    J.toR.set(.19, .03, .17); J.toL.set(-.19, .03, .17);
+    J.hipR.set(.1, -.03, 0).add(J.pel); J.hipL.set(-.1, -.03, 0).add(J.pel);
+    ik(J.hipR, J.anR, .44, .43, tmp.set(.18, 0, 1), J.knR);
+    ik(J.hipL, J.anL, .44, .43, tmp.set(-.18, 0, 1), J.knL);
     spinePt(1, yaw, sway, J.neck);
-    J.head.copy(J.neck).add(tmp.set(Math.sin(yaw) * .02, .16, .02));
-    const sx = Math.cos(yaw) * .19, sz = -Math.sin(yaw) * .19;
-    J.shR.set(sx, -.035, sz).add(J.neck); J.shL.set(-sx, -.035, -sz).add(J.neck);
-    // cloud hands: each hand circles in front of the trunk, half a cycle apart
-    const hand = (side, out) => {
-      const th = w + (side > 0 ? 0 : Math.PI);
-      tmp.set(side * .1 + .3 * Math.sin(th) * (side > 0 ? 1 : 1), .36 + .2 * Math.cos(th) * side, .36 + .05 * Math.cos(th));
-      tmp.applyAxisAngle(yAxis, yaw); return out.copy(J.pel).add(tmp);
-    };
-    hand(1, J.haR); hand(-1, J.haL);
-    ik(J.shR, J.haR, .29, .26, tmp.set(.7, -1, -.25), J.elR);
-    ik(J.shL, J.haL, .29, .26, tmp.set(-.7, -1, -.25), J.elL);
+    J.head.copy(J.neck).add(tmp.set(0, .17, .015));
+    J.shR.set(.2, -.04, 0).add(J.neck); J.shL.set(-.2, -.04, 0).add(J.neck);
+    // embracing the ball: hands in front of the chest, elbows sunk and rounded outward
+    const open = .012 * br;
+    J.haR.set(.135 + open, J.neck.y - .13, .46 + open * .6); J.haL.set(-.135 - open, J.neck.y - .13, .46 + open * .6);
+    ik(J.shR, J.haR, .31, .29, tmp.set(1, -.42, .1), J.elR);
+    ik(J.shL, J.haL, .31, .29, tmp.set(-1, -.42, .1), J.elL);
+    ballC.set(0, J.neck.y - .15, .3);
 
     // bones
     BONES.forEach(([a, b], i) => {
-      const m = bones[i]; tmp.copy(J[b]).sub(J[a]); const len = tmp.length();
-      m.position.copy(J[a]).addScaledVector(tmp, .5); m.quaternion.setFromUnitVectors(up, tmp.normalize()); m.scale.set(1, len, 1);
+      const m = bones[i]; if (!m) return; tmp.copy(J[b]).sub(J[a]); const len = tmp.length();
+      m.position.copy(J[a]).addScaledVector(tmp, .5); m.quaternion.setFromUnitVectors(up, tmp.normalize()); m.scale.set(1, Math.max(.01, len - RAD[i] * 1.2), 1);
     });
-    MARK.forEach((n, i) => { mtx.makeTranslation(J[n].x, J[n].y, J[n].z); const s = 1 + S.wSignal * .5 * Math.max(0, Math.sin(t * 5 - i * .7)); mtx.scale(tmp.set(s, s, s)); markers.setMatrixAt(i, mtx); });
+    MARK.forEach((n, i) => { const r = JR[n] * (1 + S.wSignal * .25 * Math.max(0, Math.sin(t * 5 - i * .7))); mtx.makeScale(r, r, r).setPosition(J[n]); markers.setMatrixAt(i, mtx); });
     markers.instanceMatrix.needsUpdate = true;
-    head.position.copy(J.head); head.rotation.y = yaw;
-    vertebrae.forEach((m, i) => { const u = (i + .5) / VERT; spinePt(u, yaw, sway, m.position); m.rotation.set(0, yaw * u, -.07 * sway * Math.cos(Math.PI * u)); });
-    ribs.forEach((m, i) => { const u = .62 + i * .12; spinePt(u, yaw, sway, m.position); m.position.z += .05; m.rotation.set(Math.PI / 2, 0, 0); m.rotateZ(-yaw * u); });
-
+    head.position.copy(J.head); visor.position.copy(J.head).add(tmp.set(0, .012, .068)); eye.position.copy(J.head).add(tmp.set(0, .012, .095));
+    spinePt(.74, yaw, sway, chest.position); chest.position.z += .015; core.position.copy(chest.position); core.position.z += .102;
+    pelvis.position.copy(J.pel); pelvis.position.y -= .005;
+    [[J.elR, J.haR], [J.elL, J.haL]].forEach(([e, h], i) => { tmp.copy(h).sub(e).normalize(); hands[i].position.copy(h).addScaledVector(tmp, .06); hands[i].quaternion.setFromUnitVectors(up, tmp); });
+    feet[0].position.set(J.anR.x, .03, J.anR.z + .06); feet[1].position.set(J.anL.x, .03, J.anL.z + .06);
+    vertebrae.forEach((m, i) => { const u = (i + .5) / VERT; spinePt(u, yaw, sway, m.position); m.position.z -= .02; });
     if (exo.visible) {
       exoSeg.forEach(({ m, a, b, side }) => { tmp.copy(J[b]).sub(J[a]); const len = tmp.length(); m.position.copy(J[a]).addScaledVector(tmp, .5); m.position.x += side * .065; m.quaternion.setFromUnitVectors(up, tmp.normalize()); m.scale.set(1, len * .86, 1); });
       exoAct.forEach(({ m, n, side }) => { m.position.copy(J[n]); m.position.x += side * .065; });
@@ -252,7 +262,8 @@ export function createStage(canvas, hooks = {}) {
     A.knee = 180 - deg(Math.acos(THREE.MathUtils.clamp(tmp.dot(tmp2), -1, 1))); arc(arcKnee, J.knR, tmp, tmp2, .13);
     tmp.copy(J.pel).sub(J.neck).normalize(); tmp2.copy(J.elL).sub(J.shL).normalize();
     A.shoulder = deg(Math.acos(THREE.MathUtils.clamp(tmp.dot(tmp2), -1, 1))); arc(arcSh, J.shL, tmp, tmp2, .15);
-    A.trunk = deg(yaw);
+    tmp.copy(J.shR).sub(J.elR).normalize(); tmp2.copy(J.haR).sub(J.elR).normalize();
+    A.trunk = 180 - deg(Math.acos(THREE.MathUtils.clamp(tmp.dot(tmp2), -1, 1)));
 
     trails.forEach(([n, l]) => {
       const p = l.geometry.attributes.position.array;
@@ -261,8 +272,7 @@ export function createStage(canvas, hooks = {}) {
       l.geometry.attributes.position.needsUpdate = true;
     });
     // centre of pressure follows the weight shift (plate space: x right, y = -z)
-    cop.position.x = J.pel.x * 2 * 2.1; cop.position.y = -(.1 + .05 * Math.cos(w)) * 2;
-    cop.rotation.z = -disc.rotation.z;
+    cop.position.x = J.pel.x * 2 * 9 + Math.sin(t * 2.3) * .02; cop.position.y = -(.06 + .03 * Math.sin(t * .53)) * 2;
     copPos.copyWithin(3, 0, (COPN - 1) * 3); copPos[0] = cop.position.x; copPos[1] = cop.position.y; copPos[2] = .011;
     copGeo.attributes.position.needsUpdate = true;
   }
@@ -314,6 +324,46 @@ export function createStage(canvas, hooks = {}) {
   }));
   galaxy.frustumCulled = false; emblem.add(galaxy);
 
+  // ---------- the taiji the robot holds: a ball of particles on springs. Push it and it scatters, then gathers again.
+  const NT = reduce ? 900 : small ? 1700 : 3200, RB = .2, tr = rng(33);
+  const tHome = new Float32Array(NT * 3), tPos = new Float32Array(NT * 3), tVel = new Float32Array(NT * 3), tCol = new Float32Array(NT * 3), tSize = new Float32Array(NT);
+  for (let i = 0; i < NT; i++) {
+    let x, y, z; do { x = tr() * 2 - 1; y = tr() * 2 - 1; z = tr() * 2 - 1; } while (x * x + y * y + z * z > 1);
+    z *= .4;                                                    // a lens, so the yin-yang reads from the front
+    const up_ = Math.hypot(x, y - .5), dn = Math.hypot(x, y + .5);
+    let yang = x > 0; if (up_ < .5) yang = true; if (dn < .5) yang = false; if (up_ < .16) yang = false; if (dn < .16) yang = true;
+    tHome.set([x * RB, y * RB, z * RB], i * 3);
+    const b = .55 + tr() * .45; tCol.set(yang ? [.95 * b, .92 * b, .85 * b] : [.08 * b, .62 * b, .57 * b], i * 3); tSize[i] = (yang ? 1 : .8) * (.6 + tr());
+    tPos.set([(tr() - .5) * 3, tr() * 2, (tr() - .5) * 3], i * 3);   // they fly in from everywhere on load
+  }
+  const tGeo = new THREE.BufferGeometry();
+  tGeo.setAttribute('position', new THREE.BufferAttribute(tPos, 3)); tGeo.setAttribute('color', new THREE.BufferAttribute(tCol, 3)); tGeo.setAttribute('aSize', new THREE.BufferAttribute(tSize, 1));
+  const taiji = new THREE.Points(tGeo, new THREE.ShaderMaterial({
+    transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, vertexColors: true, uniforms: { uPx: { value: renderer.getPixelRatio() } },
+    vertexShader: `uniform float uPx; attribute float aSize; varying vec3 vC; void main(){ vC=color; vec4 mv=modelViewMatrix*vec4(position,1.); gl_Position=projectionMatrix*mv; gl_PointSize=uPx*aSize*32./-mv.z; }`,
+    fragmentShader: `varying vec3 vC; void main(){ float d=length(gl_PointCoord-.5); float a=smoothstep(.5,.08,d); gl_FragColor=vec4(vC*a,a); }`,
+  }));
+  taiji.frustumCulled = false; fig.add(taiji);
+  const rayO = V(), rayD = V(), rayP = V(); let rayOn = 0, raySpeed = 0;
+  function updateTaiji(dt) {
+    const cs = Math.cos(S.spin), sn = Math.sin(S.spin), K = 26, DAMP = 4.2, RM = .11;
+    const push = rayOn > 0 ? (26 + Math.min(raySpeed, 4) * 30) : 0; rayOn -= dt; raySpeed *= Math.exp(-6 * dt);
+    let hit = 0;
+    for (let i = 0; i < NT; i++) {
+      const j = i * 3, hx = tHome[j] * cs - tHome[j + 1] * sn + ballC.x, hy = tHome[j] * sn + tHome[j + 1] * cs + ballC.y, hz = tHome[j + 2] + ballC.z;
+      let ax = (hx - tPos[j]) * K - tVel[j] * DAMP, ay = (hy - tPos[j + 1]) * K - tVel[j + 1] * DAMP, az = (hz - tPos[j + 2]) * K - tVel[j + 2] * DAMP;
+      if (push) {
+        const vx = tPos[j] - rayO.x, vy = tPos[j + 1] - rayO.y, vz = tPos[j + 2] - rayO.z, tp = vx * rayD.x + vy * rayD.y + vz * rayD.z;
+        const px = vx - rayD.x * tp, py = vy - rayD.y * tp, pz = vz - rayD.z * tp, d = Math.hypot(px, py, pz);
+        if (d < RM) { const f = push * (1 - d / RM) / (d + .004); ax += px * f + rayP.x * push * 2; ay += py * f + rayP.y * push * 2; az += pz * f; hit++; }
+      }
+      tVel[j] += ax * dt; tVel[j + 1] += ay * dt; tVel[j + 2] += az * dt;
+      tPos[j] += tVel[j] * dt; tPos[j + 1] += tVel[j + 1] * dt; tPos[j + 2] += tVel[j + 2] * dt;
+    }
+    tGeo.attributes.position.needsUpdate = true;
+    if (hit > 40 && raySpeed > .6) hooks.onStir?.(raySpeed);
+  }
+
   // ---------- human ⇄ machine: pulses leave the body's sensor points for the ring and come back
   const SRC = ['haR', 'haL', 'knR', 'knL', 'pel', 'neck', 'elR', 'elL', 'anR', 'anL'], NP = 30, pr = rng(5);
   const pulses = Array.from({ length: NP }, (_, i) => ({ j: SRC[i % SRC.length], ang: pr() * 6.283, u: pr(), sp: .22 + pr() * .3, dir: i % 3 ? 1 : -1 }));
@@ -331,7 +381,7 @@ export function createStage(canvas, hooks = {}) {
       if (p.u >= 1) { p.u = 0; p.dir = -p.dir; if (p.dir > 0) p.ang = Math.random() * 6.283; }
       pa.copy(J[p.j]).multiplyScalar(2); pa.y += FLOOR;
       const a = p.ang + S.ringSpin;
-      pb.set(Math.sin(a) * 2.03, Math.cos(a) * 2.03, 0).multiplyScalar(.8).add(halo.position);
+      pb.set(Math.sin(a) * 2.03 * HS, FLOOR + .02, -Math.cos(a) * 2.03 * HS);
       pa.toArray(lPos, i * 6); pb.toArray(lPos, i * 6 + 3);
       const u = p.u * p.u * (3 - 2 * p.u), k = Math.sin(p.u * Math.PI);
       (p.dir > 0 ? pa.lerp(pb, u) : pb.lerp(pa, u)).toArray(pPos, i * 3);
@@ -345,7 +395,7 @@ export function createStage(canvas, hooks = {}) {
   // ---------- HUD tags (HTML, so the type stays crisp)
   const hud = document.createElement('div'); hud.className = 'hud'; hud.setAttribute('aria-hidden', 'true');
   const mkTag = (zh, en, flip) => { const d = document.createElement('div'); d.className = 'tag' + (flip ? ' flip' : ''); d.innerHTML = `<b>0°</b><span>${zh}<i>${en}</i></span>`; hud.appendChild(d); return { el: d, num: d.firstChild, last: -1 }; };
-  const tags = { knee: mkTag('右膝 屈曲', 'KNEE FLEX', false), shoulder: mkTag('左肩 上舉', 'SHOULDER ELEV', true), trunk: mkTag('軀幹 旋轉', 'TRUNK ROT', false) };
+  const tags = { knee: mkTag('右膝 屈曲', 'KNEE FLEX', false), shoulder: mkTag('左肩 上舉', 'SHOULDER ELEV', true), trunk: mkTag('右肘 屈曲', 'ELBOW FLEX', false) };
   canvas.after(hud);
   const proj = V();
   function place(tag, joint, val) {
@@ -372,10 +422,17 @@ export function createStage(canvas, hooks = {}) {
   addEventListener('pointermove', e => {
     S.mx = e.clientX / innerWidth * 2 - 1; S.my = e.clientY / innerHeight * 2 - 1;
     if (!active() || !toLocal(e, gU.uMouse.value)) gU.uMouse.value.set(99, 99, 0);
+    if (active()) {      // same ray, in the figure's space
+      fig.worldToLocal(a0.copy(ray.ray.origin)); fig.worldToLocal(a1.copy(ray.ray.origin).add(ray.ray.direction));
+      a1.sub(a0).normalize(); const prev = tmp2.copy(rayO).addScaledVector(rayD, 7);
+      rayO.copy(a0); rayD.copy(a1); tmp.copy(rayO).addScaledVector(rayD, 7).sub(prev);
+      if (rayOn > 0) { rayP.copy(tmp).multiplyScalar(4); raySpeed = Math.min(6, raySpeed + tmp.length() * 6); }
+      rayOn = .25;
+    }
     if (S.drag) { const d = (e.clientX - S.lastX) * .012; S.lastX = e.clientX; S.spin += d; S.vel = lerp(S.vel, d * 60, .5); S.dragMoved += Math.abs(d); }
     else if (active() && e.pointerType === 'mouse') {
       setNdc(e); ray.setFromCamera(ndc, camera);
-      const over = S.wRing > .5 && ray.intersectObjects(hitPlates).length || ray.intersectObject(disc).length;
+      const over = S.wRing > .5 && ray.intersectObjects(hitPlates).length;
       document.body.style.cursor = over && !isUi(e) ? 'grab' : '';
     }
   }, { passive: true });
@@ -384,11 +441,8 @@ export function createStage(canvas, hooks = {}) {
     burst(e);
     setNdc(e); ray.setFromCamera(ndc, camera);
     const tri = S.wRing > .5 ? ray.intersectObjects(hitPlates)[0] : null;
-    if (tri) { const i = tri.object.userData.tri; trigrams[i].userData.pulse = 1; hooks.onTrigram?.(i); return; }
-    if (ray.intersectObject(disc).length) {
-      if (e.pointerType === 'mouse') { S.drag = true; S.lastX = e.clientX; S.dragMoved = 0; S.vel = 0; e.preventDefault(); document.body.style.cursor = 'grabbing'; }
-      else { S.vel += 7; hooks.onSpin?.(7); }
-    }
+    if (tri) { const i = tri.object.userData.tri; trigrams[i].userData.pulse = 1; S.vel += 3; hooks.onTrigram?.(i); return; }
+    S.vel += 4;
   });
   addEventListener('pointerup', () => {
     if (!S.drag) return; S.drag = false; document.body.style.cursor = '';
@@ -418,8 +472,8 @@ export function createStage(canvas, hooks = {}) {
 
     const halfH = Math.tan(THREE.MathUtils.degToRad(camera.fov / 2)) * CAM_Z, halfW = halfH * camera.aspect;
     let tx, ty, ts;
-    if (S.mobile) { ts = Math.min(1, halfW / 3.1, halfH / 6.4); tx = 0; ty = camera.position.y + halfH * (S.focus === 'hero' ? .3 : .34); }
-    else { ts = Math.min(1.3, halfW / 6, halfH / 3.3); tx = halfW * .5; ty = camera.position.y - .35; }
+    if (S.mobile) { ts = Math.min(1.2, halfW / 2.5, halfH / 5.4); tx = 0; ty = camera.position.y + halfH * (S.focus === 'hero' ? .3 : .34); }
+    else { ts = Math.min(1.6, halfW / 5, halfH / 2.75); tx = halfW * .48; ty = camera.position.y + .25; }
     if (S.focus === 'other') { ts *= .8; if (!S.mobile) tx = halfW * .66; }
     S.ex = damp(S.ex, tx, 2.5, dt); S.ey = damp(S.ey, ty, 2.5, dt); S.es = damp(S.es, ts, 2.5, dt);
 
@@ -442,14 +496,14 @@ export function createStage(canvas, hooks = {}) {
     if (!S.drag) { S.spin += (S.vel + (reduce ? 0 : .13)) * dt; S.vel *= Math.exp(-1.1 * dt); }
     S.ringSpin -= (reduce ? 0 : (m === 'bagua' ? .2 : .04)) * dt + S.vel * dt * .1;
     emblem.position.set(S.ex, S.ey, 0); emblem.scale.setScalar(S.es);
-    emblem.rotation.set(.13 + S.py * .12, -.42 + S.px * .38, 0);
-    disc.rotation.z = S.spin;
+    emblem.rotation.set(.15 + S.py * .12, -.3 + S.px * .34, 0);
     ring.rotation.z = S.ringSpin; ring.scale.setScalar(Math.max(S.wRing, .0001)); ring.visible = S.wRing > .01;
     wuxing.rotation.z = -S.ringSpin * .6; wuxing.scale.setScalar(Math.max(S.wWx, .0001)); wuxing.visible = S.wWx > .01;
     wxNodes.forEach(n => { n.rotation.z = -wuxing.rotation.z; });
     trigrams.forEach(g => { const u = g.userData; if (u.pulse > 0 || !u.mat.color.equals(cPaper)) { u.pulse = Math.max(0, u.pulse - dt * .9); u.mat.color.copy(cPaper).lerp(cRed, u.pulse); g.scale.setScalar(1 + u.pulse * .16); } });
 
     pose(t);
+    updateTaiji(dt);
     arcKnee.visible = arcSh.visible = S.wArc > .5;
     trails.forEach(([, l]) => { l.material.opacity = S.wTrail; l.visible = S.wTrail > .02; });
 
@@ -465,7 +519,7 @@ export function createStage(canvas, hooks = {}) {
     if (gU.uBurst.value < 1.5) gU.uBurst.value += dt * .7;
 
     emblem.updateMatrixWorld(true);
-    place(tags.knee, J.knR, A.knee); place(tags.shoulder, J.shL, A.shoulder); place(tags.trunk, vertebrae[2].position, Math.abs(A.trunk));
+    place(tags.knee, J.knR, A.knee); place(tags.shoulder, J.shL, A.shoulder); place(tags.trunk, J.elR, A.trunk);
     hud.classList.toggle('show', S.wArc > .5 && active());
 
     moteMat.uniforms.uTime.value = t;
@@ -480,6 +534,7 @@ export function createStage(canvas, hooks = {}) {
     setFocus(f) { S.focus = f; if (f !== 'wu') S.mode = 'taiji'; if (f !== 'tech') S.tech = 'all'; },
     setScroll(v) { S.scroll = v; },
     pulseAll() { trigrams.forEach((g, i) => setTimeout(() => { g.userData.pulse = .8; }, i * 70)); },
+    taijiSpread() { let d = 0; const cs = Math.cos(S.spin), sn = Math.sin(S.spin); for (let i = 0; i < NT; i++) { const j = i * 3; d += Math.hypot(tPos[j] - (tHome[j] * cs - tHome[j + 1] * sn + ballC.x), tPos[j + 1] - (tHome[j] * sn + tHome[j + 1] * cs + ballC.y), tPos[j + 2] - tHome[j + 2] - ballC.z); } return d / NT; },
     state: S, angles: A, renderer,
   };
 }
