@@ -196,6 +196,30 @@ export function createStage(canvas, hooks = {}) {
   const chest = part(ball, shell, .165, .14, .1), core = part(new THREE.CircleGeometry(.03, 24), glow), pelvis = part(ball, shell, .15, .075, .105);
   const hands = [part(new THREE.BoxGeometry(.028, .1, .075), shell), part(new THREE.BoxGeometry(.028, .1, .075), shell)];
   const feet = [part(new THREE.BoxGeometry(.095, .055, .25), shell), part(new THREE.BoxGeometry(.095, .055, .25), shell)];
+  // the human posed in Blender (渾圓樁) with a MediaPipe Pose skeleton drawn over it; the robot above is the fallback
+  const human = new THREE.Group(); fig.add(human); let HJ = null;
+  const MP_EDGES = [[0, 1], [1, 2], [2, 3], [3, 7], [0, 4], [4, 5], [5, 6], [6, 8], [9, 10], [11, 12], [11, 13], [13, 15], [15, 17], [15, 19], [15, 21], [17, 19],
+    [12, 14], [14, 16], [16, 18], [16, 20], [16, 22], [18, 20], [11, 23], [12, 24], [23, 24], [23, 25], [24, 26], [25, 27], [26, 28], [27, 29], [28, 30], [29, 31], [30, 32], [27, 31], [28, 32]];
+  Promise.all([
+    fetch('assets/figure.json').then(r => r.json()),
+    import('three/addons/loaders/GLTFLoader.js').then(m => new m.GLTFLoader().loadAsync('assets/figure.glb')),
+  ]).then(([j, gltf]) => {
+    const skinMat = new THREE.MeshStandardMaterial({ color: 0x566260, roughness: .58, metalness: .2 });
+    gltf.scene.traverse(o => { if (o.isMesh) o.material = skinMat; });
+    human.add(gltf.scene);
+    [...bones, head, visor, eye, chest, core, pelvis, ...hands, ...feet, ...vertebrae, markers].forEach(o => { if (o) o.visible = false; });
+    const lineMat = new THREE.MeshBasicMaterial({ color: TECH, depthTest: false, transparent: true, opacity: .95 });
+    const dotMat = new THREE.MeshBasicMaterial({ color: PAPER, depthTest: false, transparent: true });
+    const pts = j.mp.map(p => V(p[0], p[1], p[2])), cyl = new THREE.CylinderGeometry(.0042, .0042, 1, 6);
+    MP_EDGES.forEach(([a, b]) => {
+      const d = pts[b].clone().sub(pts[a]), m = new THREE.Mesh(cyl, lineMat);
+      m.position.copy(pts[a]).addScaledVector(d, .5); m.scale.y = d.length(); m.quaternion.setFromUnitVectors(up, d.normalize()); m.renderOrder = 5; human.add(m);
+    });
+    const dots = new THREE.InstancedMesh(new THREE.SphereGeometry(1, 12, 8), dotMat, pts.length);
+    pts.forEach((p, i) => { const r = i < 11 ? .007 : .015; mtx.makeScale(r, r, r).setPosition(p); dots.setMatrixAt(i, mtx); });
+    dots.renderOrder = 6; dots.frustumCulled = false; human.add(dots);
+    HJ = j;
+  }).catch(e => console.warn('figure model unavailable, showing the built-in robot instead', e));
   const VERT = 7, vertebrae = Array.from({ length: VERT }, (_, i) => { const m = new THREE.Mesh(new THREE.BoxGeometry(.075 - i * .004, .04, .055), boneMat); fig.add(m); return m; });
   const ribs = [];
   // exoskeleton (輔助科技): frames beside thigh and shank, actuator discs at hip and knee, a pelvic band
@@ -220,8 +244,15 @@ export function createStage(canvas, hooks = {}) {
   const A = { knee: 0, shoulder: 0, trunk: 0 };
   const spinePt = (u, yaw, sway, out) => out.set(-.035 * sway * Math.sin(Math.PI * u) + J.pel.x, J.pel.y + .05 + u * .5, J.pel.z + .025 * Math.sin(Math.PI * u) - .01);
 
-  const ballC = V();
+  const ballC = V(); let BS = 1;
   function pose(t) {
+    if (HJ) {
+      for (const n of ['pel', 'neck', 'head', 'shR', 'shL', 'elR', 'elL', 'hipR', 'hipL', 'knR', 'knL', 'anR', 'anL', 'toR', 'toL']) J[n].fromArray(HJ[n]);
+      J.haR.fromArray(HJ.wrR); J.haL.fromArray(HJ.wrL);
+      // the taiji sits between the two palms, sized to the gap between them
+      ballC.copy(J.haR).add(J.haL).multiplyScalar(.5); ballC.y += Math.sin(t * 1.1) * .004;
+      BS = THREE.MathUtils.clamp(J.haR.distanceTo(J.haL) * .36, .11, .2) / RB;
+    } else {
     const br = Math.sin(t * 1.1), sway = Math.sin(t * .37) * .35, yaw = 0;
     J.pel.set(.012 * sway, .835 + .006 * br, -.02);
     J.anR.set(.19, .075, 0); J.anL.set(-.19, .075, 0);
@@ -252,6 +283,7 @@ export function createStage(canvas, hooks = {}) {
     [[J.elR, J.haR], [J.elL, J.haL]].forEach(([e, h], i) => { tmp.copy(h).sub(e).normalize(); hands[i].position.copy(h).addScaledVector(tmp, .06); hands[i].quaternion.setFromUnitVectors(up, tmp); });
     feet[0].position.set(J.anR.x, .03, J.anR.z + .06); feet[1].position.set(J.anL.x, .03, J.anL.z + .06);
     vertebrae.forEach((m, i) => { const u = (i + .5) / VERT; spinePt(u, yaw, sway, m.position); m.position.z -= .02; });
+    }
     if (exo.visible) {
       exoSeg.forEach(({ m, a, b, side }) => { tmp.copy(J[b]).sub(J[a]); const len = tmp.length(); m.position.copy(J[a]).addScaledVector(tmp, .5); m.position.x += side * .065; m.quaternion.setFromUnitVectors(up, tmp.normalize()); m.scale.set(1, len * .86, 1); });
       exoAct.forEach(({ m, n, side }) => { m.position.copy(J[n]); m.position.x += side * .065; });
@@ -325,32 +357,32 @@ export function createStage(canvas, hooks = {}) {
   galaxy.frustumCulled = false; emblem.add(galaxy);
 
   // ---------- the taiji the robot holds: a ball of particles on springs. Push it and it scatters, then gathers again.
-  const NT = reduce ? 900 : small ? 1700 : 3200, RB = .2, tr = rng(33);
+  const NT = reduce ? 1500 : small ? 3200 : 6000, RB = .2, tr = rng(33);
   const tHome = new Float32Array(NT * 3), tPos = new Float32Array(NT * 3), tVel = new Float32Array(NT * 3), tCol = new Float32Array(NT * 3), tSize = new Float32Array(NT);
   for (let i = 0; i < NT; i++) {
     let x, y, z; do { x = tr() * 2 - 1; y = tr() * 2 - 1; z = tr() * 2 - 1; } while (x * x + y * y + z * z > 1);
-    z *= .4;                                                    // a lens, so the yin-yang reads from the front
+    z *= .5;                                                    // a lens, so the yin-yang reads from the front
     const up_ = Math.hypot(x, y - .5), dn = Math.hypot(x, y + .5);
     let yang = x > 0; if (up_ < .5) yang = true; if (dn < .5) yang = false; if (up_ < .16) yang = false; if (dn < .16) yang = true;
     tHome.set([x * RB, y * RB, z * RB], i * 3);
-    const b = .55 + tr() * .45; tCol.set(yang ? [.95 * b, .92 * b, .85 * b] : [.08 * b, .62 * b, .57 * b], i * 3); tSize[i] = (yang ? 1 : .8) * (.6 + tr());
+    const b = .6 + tr() * .4; tCol.set(yang ? [.95 * b, .92 * b, .85 * b] : [.98 * b, .7 * b, .2 * b], i * 3); tSize[i] = (yang ? 1 : .8) * (.6 + tr());
     tPos.set([(tr() - .5) * 3, tr() * 2, (tr() - .5) * 3], i * 3);   // they fly in from everywhere on load
   }
   const tGeo = new THREE.BufferGeometry();
   tGeo.setAttribute('position', new THREE.BufferAttribute(tPos, 3)); tGeo.setAttribute('color', new THREE.BufferAttribute(tCol, 3)); tGeo.setAttribute('aSize', new THREE.BufferAttribute(tSize, 1));
   const taiji = new THREE.Points(tGeo, new THREE.ShaderMaterial({
     transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, vertexColors: true, uniforms: { uPx: { value: renderer.getPixelRatio() } },
-    vertexShader: `uniform float uPx; attribute float aSize; varying vec3 vC; void main(){ vC=color; vec4 mv=modelViewMatrix*vec4(position,1.); gl_Position=projectionMatrix*mv; gl_PointSize=uPx*aSize*32./-mv.z; }`,
+    vertexShader: `uniform float uPx; attribute float aSize; varying vec3 vC; void main(){ vC=color; vec4 mv=modelViewMatrix*vec4(position,1.); gl_Position=projectionMatrix*mv; gl_PointSize=uPx*aSize*27./-mv.z; }`,
     fragmentShader: `varying vec3 vC; void main(){ float d=length(gl_PointCoord-.5); float a=smoothstep(.5,.08,d); gl_FragColor=vec4(vC*a,a); }`,
   }));
   taiji.frustumCulled = false; fig.add(taiji);
   const rayO = V(), rayD = V(), rayP = V(); let rayOn = 0, raySpeed = 0;
   function updateTaiji(dt) {
-    const cs = Math.cos(S.spin), sn = Math.sin(S.spin), K = 26, DAMP = 4.2, RM = .11;
-    const push = rayOn > 0 ? (26 + Math.min(raySpeed, 4) * 30) : 0; rayOn -= dt; raySpeed *= Math.exp(-6 * dt);
+    const cs = Math.cos(S.spin), sn = Math.sin(S.spin), K = 13, DAMP = 2.9, RM = .16;
+    const push = rayOn > 0 ? (70 + Math.min(raySpeed, 4) * 70) : 0; rayOn -= dt; raySpeed *= Math.exp(-6 * dt);
     let hit = 0;
     for (let i = 0; i < NT; i++) {
-      const j = i * 3, hx = tHome[j] * cs - tHome[j + 1] * sn + ballC.x, hy = tHome[j] * sn + tHome[j + 1] * cs + ballC.y, hz = tHome[j + 2] + ballC.z;
+      const j = i * 3, hx = (tHome[j] * cs - tHome[j + 1] * sn) * BS + ballC.x, hy = (tHome[j] * sn + tHome[j + 1] * cs) * BS + ballC.y, hz = tHome[j + 2] * BS + ballC.z;
       let ax = (hx - tPos[j]) * K - tVel[j] * DAMP, ay = (hy - tPos[j + 1]) * K - tVel[j + 1] * DAMP, az = (hz - tPos[j + 2]) * K - tVel[j + 2] * DAMP;
       if (push) {
         const vx = tPos[j] - rayO.x, vy = tPos[j + 1] - rayO.y, vz = tPos[j + 2] - rayO.z, tp = vx * rayD.x + vy * rayD.y + vz * rayD.z;
@@ -395,7 +427,7 @@ export function createStage(canvas, hooks = {}) {
   // ---------- HUD tags (HTML, so the type stays crisp)
   const hud = document.createElement('div'); hud.className = 'hud'; hud.setAttribute('aria-hidden', 'true');
   const mkTag = (zh, en, flip) => { const d = document.createElement('div'); d.className = 'tag' + (flip ? ' flip' : ''); d.innerHTML = `<b>0°</b><span>${zh}<i>${en}</i></span>`; hud.appendChild(d); return { el: d, num: d.firstChild, last: -1 }; };
-  const tags = { knee: mkTag('右膝 屈曲', 'KNEE FLEX', false), shoulder: mkTag('左肩 上舉', 'SHOULDER ELEV', true), trunk: mkTag('右肘 屈曲', 'ELBOW FLEX', false) };
+  const tags = { knee: mkTag('左膝 屈曲', 'KNEE FLEX', false), shoulder: mkTag('右肩 上舉', 'SHOULDER ELEV', true), trunk: mkTag('左肘 屈曲', 'ELBOW FLEX', false) };
   canvas.after(hud);
   const proj = V();
   function place(tag, joint, val) {
@@ -534,7 +566,7 @@ export function createStage(canvas, hooks = {}) {
     setFocus(f) { S.focus = f; if (f !== 'wu') S.mode = 'taiji'; if (f !== 'tech') S.tech = 'all'; },
     setScroll(v) { S.scroll = v; },
     pulseAll() { trigrams.forEach((g, i) => setTimeout(() => { g.userData.pulse = .8; }, i * 70)); },
-    taijiSpread() { let d = 0; const cs = Math.cos(S.spin), sn = Math.sin(S.spin); for (let i = 0; i < NT; i++) { const j = i * 3; d += Math.hypot(tPos[j] - (tHome[j] * cs - tHome[j + 1] * sn + ballC.x), tPos[j + 1] - (tHome[j] * sn + tHome[j + 1] * cs + ballC.y), tPos[j + 2] - tHome[j + 2] - ballC.z); } return d / NT; },
+    taijiSpread() { let d = 0; const cs = Math.cos(S.spin), sn = Math.sin(S.spin); for (let i = 0; i < NT; i++) { const j = i * 3; d += Math.hypot(tPos[j] - ((tHome[j] * cs - tHome[j + 1] * sn) * BS + ballC.x), tPos[j + 1] - ((tHome[j] * sn + tHome[j + 1] * cs) * BS + ballC.y), tPos[j + 2] - tHome[j + 2] * BS - ballC.z); } return d / NT; },
     state: S, angles: A, renderer,
   };
 }
