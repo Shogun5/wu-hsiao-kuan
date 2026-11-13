@@ -83,15 +83,15 @@ $$('.art').forEach((b, i) => {
   b.addEventListener('pointerenter', e => { if (e.pointerType === 'mouse') pick(); });
 });
 
-// ---------- two scenes: the body scan on the five elements, the captured form on the eight trigrams
+// ---------- three scenes: 太極 (scan re-posed), 形意 (the scan, on the five elements), 八卦 (captured form)
 $$('.forms button').forEach(b => b.addEventListener('click', () => {
   if (b.classList.contains('on')) return;
   $$('.forms button').forEach(x => { x.classList.toggle('on', x === b); x.setAttribute('aria-pressed', x === b); });
-  const five = b.dataset.form === 'wuxing';
-  stage?.setForm(b.dataset.form);
-  $('.hint-mouse').textContent = five ? '撥動雙掌間的氣團　·　點擊腳下五行' : '撥動雙掌間的太極　·　點擊腳下八卦';
-  $('.hint-touch').textContent = five ? '滑過雙掌間的氣團' : '滑過雙掌間的太極';
-  if (five) sound.drum(.5); else sound.whoosh(8);
+  const k = b.dataset.form, five = k === 'xingyi';
+  stage?.setForm(k);
+  $('.hint-mouse').textContent = five ? '撥動雙掌間的五行氣團　·　點擊腳下五行' : k === 'taiji' ? '撥動掌下的太極　·　點擊腳下八卦' : '撥動雙掌間的太極　·　點擊腳下八卦';
+  $('.hint-touch').textContent = five ? '滑過雙掌間的五行氣團' : '滑過掌間的太極';
+  if (five) sound.drum(.5); else if (k === 'bagua') sound.whoosh(8); else sound.pluck(3, .5);
 }));
 
 // ---------- the three specialties drive what the figure shows

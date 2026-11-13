@@ -242,13 +242,14 @@ export function createStage(canvas, hooks = {}) {
     forms[name] = { g, j }; applyForm();
   }).catch(e => console.warn('figure model unavailable: ' + base, e));
   function applyForm() {
-    const f = forms[S.form] || Object.values(forms)[0]; if (!f) return;
+    const f = forms[eff()] || Object.values(forms)[0]; if (!f) return; S.shown = eff();
     [...bones, head, visor, eye, chest, core, pelvis, ...hands, ...feet, ...vertebrae, markers].forEach(o => { if (o) o.visible = false; });
     Object.values(forms).forEach(o => { o.g.visible = o === f; });
     HJ = f.j; trails.forEach(([, l]) => { l.userData.fresh = true; });
-    tCol.set(S.form === 'wuxing' ? tColW : tColB); tGeo.attributes.color.needsUpdate = true;
+    tCol.set(eff() === 'xingyi' ? tColW : tColB); tGeo.attributes.color.needsUpdate = true;
   }
-  loadForm('wuxing', 'scan'); loadForm('bagua', 'figure');
+  // 太極: the scan re-posed to a captured frame; 形意: the scan as it was taken (三體式); 八卦: the captured mannequin
+  loadForm('taiji', 'taiji'); loadForm('xingyi', 'scan'); loadForm('bagua', 'figure');
   const VERT = 7, vertebrae = Array.from({ length: VERT }, (_, i) => { const m = new THREE.Mesh(new THREE.BoxGeometry(.075 - i * .004, .04, .055), boneMat); fig.add(m); return m; });
   const ribs = [];
   // exoskeleton (輔助科技): frames beside thigh and shank, actuator discs at hip and knee, a pelvic band
@@ -279,8 +280,8 @@ export function createStage(canvas, hooks = {}) {
       for (const n of ['pel', 'neck', 'head', 'shR', 'shL', 'elR', 'elL', 'hipR', 'hipL', 'knR', 'knL', 'anR', 'anL', 'toR', 'toL']) J[n].fromArray(HJ[n]);
       J.haR.fromArray(HJ.wrR); J.haL.fromArray(HJ.wrL);
       // the taiji sits between the two palms, sized to the gap between them
-      ballC.copy(J.haR).add(J.haL).multiplyScalar(.5); ballC.y += Math.sin(t * 1.1) * .004; ballC.z += HJ.ballZ || 0;
-      BS = THREE.MathUtils.clamp(J.haR.distanceTo(J.haL) * .36, .11, .2) / RB;
+      ballC.copy(J.haR).add(J.haL).multiplyScalar(.5); ballC.y += Math.sin(t * 1.1) * .004; ballC.z += HJ.ballZ || 0; ballC.y += HJ.ballY || 0;
+      BS = (HJ.ballR || THREE.MathUtils.clamp(J.haR.distanceTo(J.haL) * .36, .11, .2)) / RB;
     } else {
     const br = Math.sin(t * 1.1), sway = Math.sin(t * .37) * .35, yaw = 0;
     J.pel.set(.012 * sway, .835 + .006 * br, -.02);
@@ -407,7 +408,7 @@ export function createStage(canvas, hooks = {}) {
     vertexShader: `uniform float uPx; attribute float aSize; varying vec3 vC; void main(){ vC=color; vec4 mv=modelViewMatrix*vec4(position,1.); gl_Position=projectionMatrix*mv; gl_PointSize=uPx*aSize*27./-mv.z; }`,
     fragmentShader: `varying vec3 vC; void main(){ float d=length(gl_PointCoord-.5); float a=smoothstep(.5,.08,d); gl_FragColor=vec4(vC*a,a); }`,
   }));
-  tCol.set(tColW); taiji.frustumCulled = false; fig.add(taiji);
+  tCol.set(tColB); taiji.frustumCulled = false; fig.add(taiji);
   const rayO = V(), rayD = V(), rayP = V(); let rayOn = 0, raySpeed = 0;
   function updateTaiji(dt) {
     const cs = Math.cos(S.spin), sn = Math.sin(S.spin), K = 13, DAMP = 2.9, RM = .16;
@@ -470,10 +471,11 @@ export function createStage(canvas, hooks = {}) {
 
   // ---------- state & interaction
   const S = {
-    mode: 'taiji', form: 'wuxing', tech: 'all', focus: 'hero', scroll: 0, mobile: false,
+    mode: 'taiji', form: 'taiji', shown: '', tech: 'all', focus: 'hero', scroll: 0, mobile: false,
     mx: 0, my: 0, px: 0, py: 0, spin: 0, vel: 0, ringSpin: 0, drag: false, lastX: 0, dragMoved: 0,
     wDisc: 1, wRing: 1, wWx: 0, wArc: 1, wTrail: .55, wSignal: 0, wExo: 0, ex: 3.7, ey: .8, es: 1, sigT: 0, sigI: 0,
   };
+  const eff = () => S.focus === 'wu' ? S.mode : S.form;      // in the 修身 section the three arts pick the figure
   const ray = new THREE.Raycaster(), ndc = new THREE.Vector2();
   const setNdc = e => ndc.set(e.clientX / innerWidth * 2 - 1, -(e.clientY / innerHeight) * 2 + 1);
   const active = () => S.focus !== 'other';
@@ -544,8 +546,8 @@ export function createStage(canvas, hooks = {}) {
     S.ex = damp(S.ex, tx, 2.5, dt); S.ey = damp(S.ey, ty, 2.5, dt); S.es = damp(S.es, ts, 2.5, dt);
 
     const m = S.mode, k = S.tech;
-    const five = m === 'xingyi' || (m === 'taiji' && S.form === 'wuxing');
-    S.wRing = damp(S.wRing, five ? 0 : m === 'bagua' ? 1.1 : 1, 4, dt);
+    const e = eff(), five = e === 'xingyi'; if (e !== S.shown) applyForm();
+    S.wRing = damp(S.wRing, five ? 0 : e === 'bagua' ? 1.1 : 1, 4, dt);
     S.wWx = damp(S.wWx, five ? 1 : 0, 4, dt);
     S.wArc = damp(S.wArc, k === 'all' || k === 'ortho' || k === 'assist' ? 1 : 0, 5, dt);
     S.wTrail = damp(S.wTrail, k === 'motion' ? 1 : k === 'all' ? .55 : 0, 4, dt);
@@ -561,7 +563,7 @@ export function createStage(canvas, hooks = {}) {
     sun.position.set((S.ex + .9 * S.es) * sk, (S.ey - 1.2) * sk + 1.2 + 1.5 * S.es * sk, -36);
 
     if (!S.drag) { S.spin += (S.vel + (reduce ? 0 : .13)) * dt; S.vel *= Math.exp(-1.1 * dt); }
-    S.ringSpin -= (reduce ? 0 : (m === 'bagua' ? .2 : .04)) * dt + S.vel * dt * .1;
+    S.ringSpin -= (reduce ? 0 : (eff() === 'bagua' ? .2 : .04)) * dt + S.vel * dt * .1;
     emblem.position.set(S.ex, S.ey, 0); emblem.scale.setScalar(S.es);
     emblem.rotation.set(.15 + S.py * .12, -.3 + S.px * .34, 0);
     ring.rotation.z = S.ringSpin; ring.scale.setScalar(Math.max(S.wRing, .0001)); ring.visible = S.wRing > .01;
