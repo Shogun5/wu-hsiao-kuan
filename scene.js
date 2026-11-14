@@ -120,6 +120,8 @@ export function createStage(canvas, hooks = {}) {
   });
   const plate = new THREE.Group(); plate.position.y = FLOOR; plate.rotation.x = -Math.PI / 2; emblem.add(plate);
   const disc = new THREE.Mesh(new THREE.CircleGeometry(1.7, 64), new THREE.MeshBasicMaterial({ color: 0x0b0d0c, transparent: true, opacity: .55 })); plate.add(disc);
+  // 太極 scene: the floor itself is the taiji diagram
+  const yy = new THREE.Mesh(new THREE.CircleGeometry(1.55, 96), discMat); yy.position.z = .004; yy.scale.setScalar(.0001); plate.add(yy);
   // centre of pressure: dot + fading trace
   const cop = new THREE.Mesh(new THREE.CircleGeometry(.07, 24), basic(RED)); cop.position.z = .012; plate.add(cop);
   const COPN = 90, copPos = new Float32Array(COPN * 3), copGeo = new THREE.BufferGeometry();
@@ -473,7 +475,7 @@ export function createStage(canvas, hooks = {}) {
   const S = {
     mode: 'taiji', form: 'xingyi', shown: '', tech: 'all', focus: 'hero', scroll: 0, mobile: false,
     mx: 0, my: 0, px: 0, py: 0, spin: 0, vel: 0, ringSpin: 0, drag: false, lastX: 0, dragMoved: 0,
-    wDisc: 1, wRing: 1, wWx: 0, wArc: 1, wTrail: .55, wSignal: 0, wExo: 0, ex: 3.7, ey: .8, es: 1, sigT: 0, sigI: 0,
+    wDisc: 1, wYY: 0, wRing: 1, wWx: 0, wArc: 1, wTrail: .55, wSignal: 0, wExo: 0, ex: 3.7, ey: .8, es: 1, sigT: 0, sigI: 0,
   };
   const eff = () => S.focus === 'wu' ? S.mode : S.form;      // in the 修身 section the three arts pick the figure
   const ray = new THREE.Raycaster(), ndc = new THREE.Vector2();
@@ -547,7 +549,8 @@ export function createStage(canvas, hooks = {}) {
 
     const m = S.mode, k = S.tech;
     const e = eff(), five = e === 'xingyi'; if (e !== S.shown) applyForm();
-    S.wRing = damp(S.wRing, five ? 0 : e === 'bagua' ? 1.1 : 1, 4, dt);
+    S.wRing = damp(S.wRing, five || e === 'taiji' ? 0 : 1.1, 4, dt);
+    S.wYY = damp(S.wYY, e === 'taiji' ? 1 : 0, 4, dt); yy.scale.setScalar(Math.max(S.wYY, .0001)); yy.visible = S.wYY > .01; yy.rotation.z = -S.spin * .35;
     S.wWx = damp(S.wWx, five ? 1 : 0, 4, dt);
     S.wArc = damp(S.wArc, k === 'all' || k === 'ortho' || k === 'assist' ? 1 : 0, 5, dt);
     S.wTrail = damp(S.wTrail, k === 'motion' ? 1 : k === 'all' ? .55 : 0, 4, dt);

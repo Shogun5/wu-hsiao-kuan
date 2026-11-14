@@ -89,8 +89,8 @@ $$('.forms button').forEach(b => b.addEventListener('click', () => {
   $$('.forms button').forEach(x => { x.classList.toggle('on', x === b); x.setAttribute('aria-pressed', x === b); });
   const k = b.dataset.form, five = k === 'xingyi';
   stage?.setForm(k);
-  $('.hint-mouse').textContent = five ? '撥動雙掌間的五行氣團　·　點擊腳下五行' : k === 'taiji' ? '撥動掌下的太極　·　點擊腳下八卦' : '撥動雙掌間的太極　·　點擊腳下八卦';
-  $('.hint-touch').textContent = five ? '滑過雙掌間的五行氣團' : '滑過掌間的太極';
+  $('.hint-mouse').textContent = five ? '撥動雙掌間的五行氣團　·　點擊腳下五行' : k === 'taiji' ? '撥動懷中的太極　·　腳踏太極圖' : '撥動雙掌間的太極　·　點擊腳下八卦';
+  $('.hint-touch').textContent = five ? '滑過雙掌間的五行氣團' : k === 'taiji' ? '滑過懷中的太極' : '滑過掌間的太極';
   if (five) sound.drum(.5); else if (k === 'bagua') sound.whoosh(8); else sound.pluck(3, .5);
 }));
 
