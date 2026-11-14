@@ -366,11 +366,11 @@ export function createStage(canvas, hooks = {}) {
     vertexShader: `attribute vec4 aP; attribute float aKind;
       uniform float uTime,uSpin,uPx,uBurst,uEnergy; uniform vec3 uMouse,uBurstPos; varying float vA; varying float vS;
       void main(){ float r=aP.x, sd=aP.w; vec3 p; vS=sd;
-        if(aKind<.5){ float a=aP.y+(uTime*.2+uSpin*.55)/(.35+r*.42);
+        if(aKind<.5){ float a=-(aP.y+(uTime*.2+uSpin*.55)/(.35+r*.42));   // counter-clockwise seen from above
           p=vec3(cos(a)*r, ${FLOOR.toFixed(2)}+.03+sin(a*3.+sd*20.)*.035*r+(aP.z-.5)*.1, sin(a)*r);
           vA=smoothstep(7.,3.2,r)*(.45+.55*sd);
         } else { float u=fract(aP.z+uTime*(.03+.05*sd)*(1.+uEnergy));
-          float rr=mix(1.55,.42,pow(u,.7))*(.55+r*.55), a=aP.y+u*8.+uTime*.25+uSpin*.4;
+          float rr=mix(1.55,.42,pow(u,.7))*(.55+r*.55), a=-(aP.y+u*8.+uTime*.25+uSpin*.4);
           p=vec3(cos(a)*rr, ${FLOOR.toFixed(2)}+u*4.1, sin(a)*rr);
           vA=sin(u*3.1416)*(.35+.65*sd);
         }
@@ -551,7 +551,7 @@ export function createStage(canvas, hooks = {}) {
     const m = S.mode, k = S.tech;
     const e = eff(), five = e === 'xingyi'; if (e !== S.shown) applyForm();
     S.wRing = damp(S.wRing, five || e === 'taiji' ? 0 : 1.1, 4, dt);
-    S.wYY = damp(S.wYY, e === 'taiji' ? 1 : 0, 4, dt); yy.scale.setScalar(Math.max(S.wYY, .0001)); yy.visible = S.wYY > .01; yy.rotation.z = -S.spin * .35;
+    S.wYY = damp(S.wYY, e === 'taiji' ? 1 : 0, 4, dt); yy.scale.setScalar(Math.max(S.wYY, .0001)); yy.visible = S.wYY > .01; yy.rotation.z = S.spin * .35;
     S.wWx = damp(S.wWx, five ? 1 : 0, 4, dt);
     S.wArc = damp(S.wArc, k === 'all' || k === 'ortho' || k === 'assist' ? 1 : 0, 5, dt);
     S.wTrail = damp(S.wTrail, k === 'motion' ? 1 : k === 'all' ? .55 : 0, 4, dt);
@@ -567,11 +567,11 @@ export function createStage(canvas, hooks = {}) {
     sun.position.set((S.ex + .9 * S.es) * sk, (S.ey - 1.2) * sk + 1.2 + 1.5 * S.es * sk, -36);
 
     if (!S.drag) { S.spin += (S.vel + (reduce ? 0 : .13)) * dt; S.vel *= Math.exp(-1.1 * dt); }
-    S.ringSpin -= (reduce ? 0 : (eff() === 'bagua' ? .2 : .04)) * dt + S.vel * dt * .1;
+    S.ringSpin += (reduce ? 0 : (eff() === 'bagua' ? .2 : .04)) * dt + S.vel * dt * .1;
     emblem.position.set(S.ex, S.ey, 0); emblem.scale.setScalar(S.es);
     emblem.rotation.set(.15 + S.py * .12, -.3 + S.px * .34, 0);
     ring.rotation.z = S.ringSpin; ring.scale.setScalar(Math.max(S.wRing, .0001)); ring.visible = S.wRing > .01;
-    wuxing.rotation.z = -S.ringSpin * .6; wuxing.scale.setScalar(Math.max(S.wWx, .0001)); wuxing.visible = S.wWx > .01;
+    wuxing.rotation.z = S.ringSpin * .6; wuxing.scale.setScalar(Math.max(S.wWx, .0001)); wuxing.visible = S.wWx > .01;
     wxNodes.forEach(n => { n.rotation.z = -wuxing.rotation.z; }); if (wuxing.visible) updateWuxing(t, dt);
     trigrams.forEach(g => { const u = g.userData; if (u.pulse > 0 || !u.mat.color.equals(cPaper)) { u.pulse = Math.max(0, u.pulse - dt * .9); u.mat.color.copy(cPaper).lerp(cRed, u.pulse); g.scale.setScalar(1 + u.pulse * .16); } });
 

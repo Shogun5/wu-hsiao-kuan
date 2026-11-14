@@ -8,7 +8,7 @@ const EN = [
   ['.fields', ['Sports Science × Rehabilitation × Smart Sensing × AI']],
   ['.forms button', ['Taiji<i>太極</i>', 'Xingyi<i>形意</i>', 'Bagua<i>八卦</i>']],
   ['.sec-head h2', ['About', 'Research', 'Philosophy', 'Work', 'Publications', 'Practice', 'Contact']],
-  ['.sec-head .en', ['其人', '研究 · RESEARCH &amp; INNOVATION', '理念', '成果 · RESEARCH &amp; DEVELOPMENT', '著作 · PATENTS', '修身 · INTERNAL MARTIAL ARTS', '聯絡']],
+  ['.sec-head .en', ['簡介', '研究 · RESEARCH &amp; INNOVATION', '理念', '成果 · RESEARCH &amp; DEVELOPMENT', '著作 · PATENTS', '修身 · INTERNAL MARTIAL ARTS', '聯絡']],
   ['#about h3', ['Current position', 'Education', 'Certifications', 'Experience']],
   ['#about .lead', ['National Taipei University of Nursing and Health Sciences<br>Assistant Professor, Department of Exercise and Health Science']],
   ['#about .plain li', [
