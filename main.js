@@ -1,4 +1,5 @@
 import { Sound } from './audio.js';
+import { setLang, initialLang, hint } from './i18n.js';
 
 const sound = new Sound();
 const $ = (s, r = document) => r.querySelector(s), $$ = (s, r = document) => [...r.querySelectorAll(s)];
@@ -19,6 +20,22 @@ try {
   console.warn('3D stage unavailable:', e);
   $('#stage').remove();
 }
+
+// ---------- 中文 ⇄ English
+let lang = initialLang(), form = 'xingyi';
+const langBtn = $('#lang'), btnLabel = $('#sound').childNodes[1];
+function showHint() { const [m, t] = hint(lang, form); $('.hint-mouse').textContent = m; $('.hint-touch').textContent = t; }
+function applyLang(first) {
+  setLang(lang);
+  window.renderContent(lang, !first);
+  if (!first) $$('[data-form]').forEach(x => { if (x.classList.contains('on')) form = x.dataset.form; });
+  showHint();
+  langBtn.textContent = lang === 'en' ? '中文' : 'EN';
+  btnLabel.textContent = lang === 'en' ? 'Sound' : '聲';
+}
+if (lang !== 'zh') applyLang(true);
+langBtn.textContent = lang === 'en' ? '中文' : 'EN';
+langBtn.addEventListener('click', () => { lang = lang === 'en' ? 'zh' : 'en'; applyLang(false); sound.pluck(6, .3); });
 
 // ---------- sound toggle
 const btn = $('#sound');
@@ -89,8 +106,7 @@ $$('.forms button').forEach(b => b.addEventListener('click', () => {
   $$('.forms button').forEach(x => { x.classList.toggle('on', x === b); x.setAttribute('aria-pressed', x === b); });
   const k = b.dataset.form, five = k === 'xingyi';
   stage?.setForm(k);
-  $('.hint-mouse').textContent = five ? '撥動雙掌間的五行氣團　·　點擊腳下五行' : k === 'taiji' ? '撥動懷中的太極　·　腳踏太極圖' : '撥動雙掌間的太極　·　點擊腳下八卦';
-  $('.hint-touch').textContent = five ? '滑過雙掌間的五行氣團' : k === 'taiji' ? '滑過懷中的太極' : '滑過掌間的太極';
+  form = k; showHint();
   if (five) sound.drum(.5); else if (k === 'bagua') sound.whoosh(8); else sound.pluck(3, .5);
 }));
 

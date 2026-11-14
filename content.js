@@ -74,30 +74,60 @@
     ['TW201519865A', 2015, '可攜式關節附屬動作量化裝置 Portable apparatus for quantifying joint accessory movement.'],
   ];
 
+  const skillsEn = ["Embedded systems", "Microcomputer systems", "Programming", "Mobile app development", "Sensor design & development", "Synchronised signal acquisition", "Digital data processing & analysis", "PCB design & fabrication", "Motor control", "Mechatronic integration", "Additive manufacturing", "Vector graphics", "3D modelling", "Internet of Things"];
+  const programsEn = [
+    "Synchronised signal acquisition for the PTI motion-analysis system and force plates",
+    "Signal acquisition for a six-axis hand-held force transducer",
+    "External voltage-divider module for the PG Drives motor controller",
+    "Pitching-motion analysis: processing of VICON capture data",
+    "Gait study data analysis (cruciate ligament): processing of VICON capture data",
+    "Plantar-pressure analysis: VICON and force-plate data processing",
+    "Ultrasound image analysis of plantar fascia thickness",
+    "Simple generator for occupational-therapy electronic records",
+    "Laser-shutter exposure timing control",
+    "Trigger-driven laser-shutter exposure timing control",
+    "Hardware and software interface between PSoC and cRIO",
+    "Multiscale entropy (MSE) analysis",
+    "Portable ECG built on PSoC",
+    "Accelerometer acquisition on PSoC 3, adjusting motor torque by shorting or opening the motor leads",
+    "Patient coordination-control program using NXT motors and angle sensing",
+    "Walking gait analysis",
+    "Syntax generator for post-hoc tests in non-parametric analysis",
+    "Brushless-motor control signal generator on PSoC",
+    "3D-print layer-resume printing program",
+  ];
+
   const esc = s => s.replace(/&/g, '&amp;').replace(/</g, '&lt;');
   const fmt = s => esc(s)
     .replace(/\*(.+?)\*/g, '<em>$1</em>')
     .replace(/Wu, H\.-K\.|吳孝觀/g, m => '<strong>' + m + '</strong>');
   const $ = id => document.getElementById(id);
+  const T = {
+    zh: { j: '學術著作', c: '研討會文章', z: '中文著作', p: '發明專利', more: '其他曾協助開發之研究程式', n: ' 項' },
+    en: { j: 'Journal articles', c: 'Conference papers', z: 'Publications in Chinese', p: 'Patents', more: 'Other research software I helped develop', n: ' items' },
+  };
 
-  $('skills').innerHTML = skills.map(([a, b]) => `<li>${esc(a)}${b ? `<small>${esc(b)}</small>` : ''}</li>`).join('');
-  $('programs').innerHTML = programs.map(p => `<li>${esc(p)}</li>`).join('');
-  $('prog-count').textContent = programs.length + ' 項';
+  // lang: 'zh' | 'en'; shown: true when re-rendering a page that is already on screen
+  window.renderContent = function (lang, shown) {
+    const en = lang === 'en', t = T[lang];
+    $('skills').innerHTML = skills.map(([a, b], i) => `<li>${esc(en ? skillsEn[i] : a)}${b ? `<small>${esc(b)}</small>` : ''}</li>`).join('');
+    $('programs').innerHTML = (en ? programsEn : programs).map(p => `<li>${esc(p)}</li>`).join('');
+    document.querySelector('.more summary').innerHTML = `${t.more} <i id="prog-count">${programs.length}${t.n}</i>`;
 
-  const paper = ([y, t, doi]) =>
-    `<li><span class="y">${y}</span><span>${fmt(t)}${doi ? ` <a href="https://doi.org/${doi}" target="_blank" rel="noopener">doi ↗</a>` : ''}</span></li>`;
-  const patent = ([n, y, t]) =>
-    `<li class="pat"><span class="y">${y}</span><span><strong>${n}</strong>　${esc(t)}</span></li>`;
-  const group = (title, items, fn) =>
-    `<div class="pub-group reveal"><h3>${title}</h3><ol>${items.map(fn).join('')}</ol></div>`;
+    const paper = ([y, x, doi]) =>
+      `<li><span class="y">${y}</span><span>${fmt(x)}${doi ? ` <a href="https://doi.org/${doi}" target="_blank" rel="noopener">doi ↗</a>` : ''}</span></li>`;
+    // patents carry a Chinese and an English title; the English page shows the English one
+    const pat = x => en ? x.replace(/^[^A-Za-z]*(?=[A-Z])/, '').replace('（申請中）', ' (pending)') : x;
+    const patent = ([n, y, x]) =>
+      `<li class="pat"><span class="y">${y}</span><span><strong>${n}</strong>　${esc(pat(x))}</span></li>`;
+    const group = (title, items, fn) =>
+      `<div class="pub-group reveal${shown ? ' in' : ''}"><h3>${title}</h3><ol>${items.map(fn).join('')}</ol></div>`;
 
-  $('pub-lists').innerHTML =
-    group('學術著作', journals, paper) +
-    group('研討會文章', conferences, paper) +
-    group('中文著作', chinese, paper) +
-    group('發明專利', patents, patent);
-
-  $('tally').innerHTML = [
-    [patents.length, '發明專利'], [journals.length, '學術著作'], [conferences.length, '研討會文章'], [chinese.length, '中文著作'],
-  ].map(([n, l]) => `<div><b data-count="${n}">${n}</b><span>${l}</span></div>`).join('');
+    $('pub-lists').innerHTML =
+      group(t.j, journals, paper) + group(t.c, conferences, paper) + group(t.z, chinese, paper) + group(t.p, patents, patent);
+    $('tally').innerHTML = [
+      [patents.length, t.p], [journals.length, t.j], [conferences.length, t.c], [chinese.length, t.z],
+    ].map(([n, l]) => `<div><b data-count="${n}">${n}</b><span>${l}</span></div>`).join('');
+  };
+  window.renderContent('zh', false);
 })();

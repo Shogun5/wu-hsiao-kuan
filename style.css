@@ -328,3 +328,28 @@ ol.cols li::marker{font-family:var(--mono);font-size:12px;color:var(--ink-3)}
 }
 
 @media (min-width:821px) and (max-width:1150px){.hero h1{font-size:12.5vw}}
+
+/* ---------- language switch + English typography (Latin text needs far less tracking than Chinese) */
+.lang{margin-left:0;font-family:var(--mono);font-size:11px;letter-spacing:.16em;min-width:46px;justify-content:center}
+html[lang="en"] .lang{font-family:var(--serif);font-size:13px;letter-spacing:.2em}
+html[lang="en"] .links a{letter-spacing:.08em;font-size:14px}
+html[lang="en"] .links a::after{right:.08em}
+html[lang="en"] .brand{letter-spacing:.08em}
+html[lang="en"] .hero-meta{letter-spacing:.06em;line-height:1.6;max-width:34em}
+html[lang="en"] .motto{letter-spacing:.03em;line-height:1.35;font-size:clamp(18px,1.9vw,26px)}
+html[lang="en"] .fields{letter-spacing:.08em}
+html[lang="en"] .sec-head h2{letter-spacing:.01em;font-size:clamp(40px,6vw,84px)}
+html[lang="en"] .sec-head .en{letter-spacing:.3em}
+html[lang="en"] .forms button{letter-spacing:.08em}
+html[lang="en"] .forms button i{font-family:var(--serif);font-size:11px;letter-spacing:.2em}
+html[lang="en"] .art b{letter-spacing:.02em}
+html[lang="en"] .art span{letter-spacing:.14em}
+html[lang="en"] .big{letter-spacing:.04em}
+html[lang="en"] .creed,html[lang="en"] .vision-line,html[lang="en"] .hint{letter-spacing:.04em}
+html[lang="en"] .intro,html[lang="en"] .idea-grid p,html[lang="en"] .pillar-more p,html[lang="en"] .vision p,html[lang="en"] .highlights p,html[lang="en"] .work p,html[lang="en"] .lead,html[lang="en"] .plain li,html[lang="en"] .path li,html[lang="en"] .addr,html[lang="en"] .feat span{letter-spacing:.01em}
+html[lang="en"] h3,html[lang="en"] .pillar b,html[lang="en"] .highlights b,html[lang="en"] .feat b,html[lang="en"] .work h3,html[lang="en"] .chips li,html[lang="en"] .more summary,html[lang="en"] .tally span{letter-spacing:.03em}
+html[lang="en"] .pillar > span,html[lang="en"] .highlights span{font-family:var(--serif);letter-spacing:.2em}
+html[lang="en"] .path li b{margin-right:.5em}
+html[lang="en"] .tag span{font-size:0}
+html[lang="en"] .tag span i{display:block;font-size:9px;color:var(--ink-2)}
+html[lang="en"] .sound{letter-spacing:.06em}
