@@ -24,6 +24,7 @@ const EN = [
     '<b>Chen-An Rehabilitation Clinic</b>Physical Therapist',
     '<b>Yuan-Sheng Rehabilitation Clinic</b>Physical Therapist',
     '<b>Han-Ming Hospital</b>Physical Therapist']],
+  ['.gallery-head h3', ['In the classroom and the lab']],
   ['#spec .intro', ['Bringing together sports biomechanics, rehabilitation science and artificial intelligence. Through human movement analysis, smart sensing, virtual reality and wearable technology, I develop precise measurement and health-promotion techniques, and work to turn interdisciplinary research into practical use.']],
   ['.pillar b', ['Sports Biomechanics &amp; Human Movement Analysis', 'Smart Sensing &amp; Rehabilitation Technology', 'Neuromuscular Control, Balance &amp; Mind-Body Health', 'Assistive Technology &amp; Smart Healthcare']],
   ['.pillar > span', ['運動生物力學與人體動作分析', '智慧感測與復健科技', '神經肌肉控制、平衡與身心健康', '輔助科技與智慧健康應用']],

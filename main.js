@@ -123,6 +123,22 @@ $$('.pillar').forEach((b, i) => {
   b.addEventListener('pointerenter', e => { if (e.pointerType === 'mouse') pick(); });
 });
 
+// ---------- photo strip: swipe / drag / arrows
+{
+  const track = $('.gallery-track'), shots = $$('img', track), count = $('.gallery-count');
+  const pad = n => String(n).padStart(2, '0');
+  const current = () => { const x = track.scrollLeft + track.clientWidth * .35; let k = 0; shots.forEach((im, i) => { if (im.offsetLeft - track.offsetLeft <= x) k = i; }); return k; };
+  const go = i => { const im = shots[Math.max(0, Math.min(shots.length - 1, i))]; track.scrollTo({ left: im.offsetLeft - track.offsetLeft, behavior: 'smooth' }); };
+  track.addEventListener('scroll', () => { count.textContent = pad(current() + 1) + ' / ' + pad(shots.length); }, { passive: true });
+  $$('.gallery-btn').forEach(b => b.addEventListener('click', () => { go(current() + +b.dataset.dir); sound.pluck(5, .25); }));
+  track.addEventListener('keydown', e => { if (e.key === 'ArrowRight') go(current() + 1); if (e.key === 'ArrowLeft') go(current() - 1); });
+  let down = false, x0 = 0, s0 = 0;                    // mouse drag (touch scrolls natively)
+  track.addEventListener('pointerdown', e => { if (e.pointerType !== 'mouse') return; down = true; x0 = e.clientX; s0 = track.scrollLeft; track.classList.add('drag'); track.setPointerCapture(e.pointerId); });
+  track.addEventListener('pointermove', e => { if (down) track.scrollLeft = s0 - (e.clientX - x0); });
+  const up = () => { if (!down) return; down = false; track.classList.remove('drag'); go(current()); };
+  track.addEventListener('pointerup', up); track.addEventListener('pointercancel', up);
+}
+
 // ---------- small sounds on things you can touch
 $$('[data-note]').forEach(el => el.addEventListener('pointerenter', e => {
   if (e.pointerType === 'mouse') sound.pluck(+el.dataset.note, .28);
