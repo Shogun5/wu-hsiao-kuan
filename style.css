@@ -409,3 +409,4 @@ html[lang="en"] .sound{letter-spacing:.06em}
   .gallery-track img{height:auto;width:86%;max-height:70svh;object-fit:cover}
   .gallery-btn{display:none}
 }
+@media (max-width:820px){.gallery-track img{width:88%;height:auto;max-height:none;aspect-ratio:auto}}
