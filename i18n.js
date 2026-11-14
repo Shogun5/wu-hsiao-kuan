@@ -4,7 +4,7 @@ const EN = [
   ['.brand-name', ['Wu, Hsiao-Kuan']],
   ['.links a', ['About', 'Research', 'Work', 'Publications', 'Contact']],
   ['.hero-meta', ['Assistant Professor · Department of Exercise and Health Science<br>National Taipei University of Nursing and Health Sciences']],
-  ['.motto', ['Exploring human movement,<br>advancing smart health technology']],
+  ['.motto', ['Exploring human movement, <br>advancing smart health technology']],
   ['.fields', ['Sports Science × Rehabilitation × Smart Sensing × AI']],
   ['.forms button', ['Taiji<i>太極</i>', 'Xingyi<i>形意</i>', 'Bagua<i>八卦</i>']],
   ['.sec-head h2', ['About', 'Research', 'Philosophy', 'Work', 'Publications', 'Practice', 'Contact']],
@@ -72,8 +72,8 @@ const EN = [
 ];
 const TITLE = { zh: '吳孝觀 ｜ 探索人體動作，創新智慧健康科技', en: 'Wu, Hsiao-Kuan ｜ Exploring human movement, advancing smart health technology' };
 const HINT = {
-  zh: { taiji: ['撥動懷中的太極　·　腳踏太極圖', '滑過懷中的太極'], xingyi: ['撥動雙掌間的五行氣團　·　點擊腳下五行', '滑過雙掌間的五行氣團'], bagua: ['撥動雙掌間的太極　·　點擊腳下八卦', '滑過掌間的太極'] },
-  en: { taiji: ['Stir the taiji held in the arms', 'Swipe through the taiji'], xingyi: ['Stir the orb　·　click the five elements', 'Swipe through the orb'], bagua: ['Stir the taiji　·　click the trigrams', 'Swipe through the taiji '] },
+  zh: { taiji: ['撥動懷中的太極　·　腳踏太極圖', '左右滑過懷中的太極'], xingyi: ['撥動雙掌間的五行氣團　·　點擊腳下五行', '左右滑過人物手中的氣團　·　點一下腳下五行'], bagua: ['撥動雙掌間的太極　·　點擊腳下八卦', '左右滑過掌間的太極　·　點一下腳下八卦'] },
+  en: { taiji: ['Stir the taiji held in the arms', 'Swipe sideways through the taiji'], xingyi: ['Stir the orb　·　click the five elements', 'Swipe sideways through the orb　·　tap the elements'], bagua: ['Stir the taiji　·　click the trigrams', 'Swipe sideways through the taiji　·　tap the trigrams'] },
 };
 
 let cache = null;

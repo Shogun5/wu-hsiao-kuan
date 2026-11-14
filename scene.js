@@ -475,7 +475,7 @@ export function createStage(canvas, hooks = {}) {
   const S = {
     mode: 'taiji', form: 'xingyi', shown: '', tech: 'all', focus: 'hero', scroll: 0, mobile: false,
     mx: 0, my: 0, px: 0, py: 0, spin: 0, vel: 0, ringSpin: 0, drag: false, lastX: 0, dragMoved: 0,
-    wDisc: 1, wYY: 0, wRing: 1, wWx: 0, wArc: 1, wTrail: .55, wSignal: 0, wExo: 0, ex: 3.7, ey: .8, es: 1, sigT: 0, sigI: 0,
+    wDisc: 1, wYY: 0, wRing: 1, wWx: 0, wArc: 1, wTrail: .55, wSignal: 0, wExo: 0, ex: innerWidth < innerHeight ? 0 : 3.7, ey: .8, es: 1, sigT: 0, sigI: 0,
   };
   const eff = () => S.focus === 'wu' ? S.mode : S.form;      // in the 修身 section the three arts pick the figure
   const ray = new THREE.Raycaster(), ndc = new THREE.Vector2();
@@ -542,7 +542,8 @@ export function createStage(canvas, hooks = {}) {
 
     const halfH = Math.tan(THREE.MathUtils.degToRad(camera.fov / 2)) * CAM_Z, halfW = halfH * camera.aspect;
     let tx, ty, ts;
-    if (S.mobile) { ts = Math.min(1.2, halfW / 2.5, halfH / 5.4); tx = 0; ty = camera.position.y + halfH * (S.focus === 'hero' ? .3 : .34); }
+    if (S.mobile) { const hero = S.focus === 'hero';      // phone: the figure owns the top of the screen, the text sits below it
+      ts = hero ? Math.min(1.2, halfW / 2.05, halfH / 4.3) : Math.min(1.2, halfW / 2.5, halfH / 5.4); tx = 0; ty = camera.position.y + halfH * (hero ? .3 : .34); }
     else { ts = Math.min(1.6, halfW / 5, halfH / 2.75); tx = halfW * .48; ty = camera.position.y + .25; }
     if (S.focus === 'other') { ts *= .8; if (!S.mobile) tx = halfW * .66; }
     S.ex = damp(S.ex, tx, 2.5, dt); S.ey = damp(S.ey, ty, 2.5, dt); S.es = damp(S.es, ts, 2.5, dt);
