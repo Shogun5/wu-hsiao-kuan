@@ -66,6 +66,86 @@ export function createStage(canvas, hooks = {}) {
   const sun = new THREE.Mesh(new THREE.CircleGeometry(1, 96), new THREE.MeshBasicMaterial({ color: RED }));
   sun.position.z = -36; scene.add(sun);
 
+  // ---------- night sky after sunset: a crescent moon, the Big Dipper pointing to Polaris, a faint Milky Way,
+  // and aurora at the very end of the page. Laid out in units of the sky's half-height, so it fits any screen.
+  const skySmall = Math.min(innerWidth, innerHeight) < 700, SKYD = CAM_Z + 40, night = new THREE.Group(); night.visible = false; scene.add(night);
+  const nU = { uNight: { value: 0 }, uAur: { value: 0 }, uTime: { value: 0 }, uPx: { value: renderer.getPixelRatio() } };
+  const starMat = new THREE.ShaderMaterial({
+    transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, uniforms: nU,
+    vertexShader: `uniform float uTime,uPx,uNight; attribute float aSize; attribute float aBri; attribute float aSeed; varying float vA;
+      void main(){ vec4 mv=modelViewMatrix*vec4(position,1.); gl_Position=projectionMatrix*mv;
+        float tw=.72+.28*sin(uTime*(1.1+aSeed*2.3)+aSeed*40.); gl_PointSize=uPx*aSize; vA=uNight*tw*aBri; }`,
+    fragmentShader: `varying float vA; void main(){ float d=length(gl_PointCoord-.5); float a=smoothstep(.5,0.,d)*.45+smoothstep(.2,0.,d); a*=vA;
+      gl_FragColor=vec4(vec3(.95,.93,.86)*a,a); }`,
+  });
+  const sr_ = rng(91), stars = (list) => {
+    const g = new THREE.BufferGeometry();
+    g.setAttribute('position', new THREE.Float32BufferAttribute(list.flatMap(p => [p[0], p[1], 0]), 3));
+    g.setAttribute('aSize', new THREE.Float32BufferAttribute(list.map(p => p[2]), 1));
+    g.setAttribute('aBri', new THREE.Float32BufferAttribute(list.map(p => p[3]), 1));
+    g.setAttribute('aSeed', new THREE.Float32BufferAttribute(list.map(() => sr_()), 1));
+    const m = new THREE.Points(g, starMat); m.frustumCulled = false; return m;
+  };
+  {
+    const field = [], gs = () => (sr_() + sr_() + sr_() - 1.5) / 1.5;
+    for (let i = 0; i < (skySmall ? 380 : 650); i++) field.push([(sr_() * 2 - 1) * 2.6, sr_() * 1.25 - .25, 2 + Math.pow(sr_(), 3) * 4, .3 + Math.pow(sr_(), 2) * .7]);
+    for (let i = 0; i < (skySmall ? 1800 : 3800); i++) {      // the Milky Way: a soft band rising across the sky
+      const t = (sr_() * 2 - 1) * 2.6, w = .12 + .05 * Math.sin(t * 2.1), o = gs() * w;
+      field.push([t - o * .3, .5 + .16 * t + .07 * Math.sin(t * 1.3) + o, 1.6 + sr_() * 2, (.16 + sr_() * .34) * (1 - Math.abs(o) / (w * 1.6))]);
+    }
+    night.add(stars(field));
+  }
+  // the Big Dipper and Polaris from their real coordinates, projected round the celestial pole
+  const DIP = [[11.062, 61.75], [11.031, 56.38], [11.897, 53.69], [12.257, 57.03], [12.9, 55.96], [13.399, 54.93], [13.792, 49.31]], POL = [2.53, 89.26];
+  const skyProj = ([ra, dec]) => { const r = 90 - dec, t = ra * Math.PI / 12; return V(r * Math.sin(t), -r * Math.cos(t), 0); };
+  const dip = new THREE.Group(); night.add(dip);
+  {
+    const P = DIP.map(skyProj), pol = skyProj(POL), c = P.reduce((a, p) => a.add(p), V()).multiplyScalar(1 / P.length);
+    const ang = Math.atan2(pol.y - c.y, pol.x - c.x), rot = THREE.MathUtils.degToRad(58) - ang, L = pol.distanceTo(c), mid = c.clone().lerp(pol, .5);
+    const fit = p => { p.sub(mid).applyAxisAngle(V(0, 0, 1), rot).multiplyScalar(1 / L); return p; };
+    P.forEach(fit); fit(pol);
+    dip.add(stars([...P.map((p, i) => [p.x, p.y, i === 3 ? 9 : 11, i === 3 ? .8 : 1]), [pol.x, pol.y, 14, 1]]));
+    const lineMat = new THREE.LineBasicMaterial({ color: TECH, transparent: true, opacity: 0, depthWrite: false });
+    const dashMat = new THREE.LineDashedMaterial({ color: TECH, transparent: true, opacity: 0, dashSize: .025, gapSize: .03, depthWrite: false });
+    dip.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints([0, 1, 2, 3, 0].map(i => P[i])), lineMat));
+    dip.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints([3, 4, 5, 6].map(i => P[i])), lineMat));
+    const pointer = new THREE.Line(new THREE.BufferGeometry().setFromPoints([P[1], P[0].clone().lerp(pol, .04), pol]), dashMat); pointer.computeLineDistances(); dip.add(pointer);
+    const label = (zh, en, p, dx, dy) => {
+      const cv = document.createElement('canvas'); cv.width = 512; cv.height = 112; const tex = new THREE.CanvasTexture(cv); tex.colorSpace = THREE.SRGBColorSpace;
+      const paint = () => { const x = cv.getContext('2d'); x.clearRect(0, 0, 512, 112); x.fillStyle = '#63d6c6'; x.font = '500 44px "Noto Serif TC",serif'; x.fillText(zh, 4, 50); x.font = '300 26px "IBM Plex Mono",monospace'; x.fillText(en, 6, 94); tex.needsUpdate = true; };
+      paint(); document.fonts?.ready.then(paint);
+      const m = new THREE.Mesh(new THREE.PlaneGeometry(.44, .097), new THREE.MeshBasicMaterial({ map: tex, transparent: true, opacity: 0, depthWrite: false }));
+      m.position.set(p.x + dx + .22, p.y + dy, 0); dip.add(m); return m.material;
+    };
+    dip.userData.fade = [lineMat, dashMat, label('北極星', 'POLARIS', pol, .035, .0), label('北斗七星', 'BIG DIPPER', P[6], .02, -.06)];
+  }
+  const skyVert = `varying vec2 vUv; void main(){ vUv=uv; gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.); }`;
+  const moon = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), new THREE.ShaderMaterial({
+    transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, uniforms: nU, vertexShader: skyVert,
+    fragmentShader: `uniform float uNight; varying vec2 vUv; void main(){ vec2 p=vUv*2.-1.; float r=length(p), w=fwidth(r)*1.5;
+      float disc=1.-smoothstep(.34-w,.34+w,r), dark=1.-smoothstep(.33-w,.33+w,length(p-vec2(-.15,.06)));
+      float lit=disc*(1.-dark*.93), glow=exp(-r*r*7.)*.28;
+      vec3 c=vec3(.97,.94,.85); float a=(lit+glow)*uNight; gl_FragColor=vec4(c*a,a); }`,
+  }));
+  night.add(moon);
+  const aurora = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), new THREE.ShaderMaterial({
+    transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, uniforms: nU, vertexShader: skyVert,
+    fragmentShader: `uniform float uAur,uTime; varying vec2 vUv;
+      float h(float n){ return fract(sin(n)*43758.5453); }
+      float n1(float x){ float i=floor(x), f=fract(x); f=f*f*(3.-2.*f); return mix(h(i),h(i+1.),f); }
+      void main(){ float x=vUv.x*6., t=uTime*.12; vec3 col=vec3(0.); float acc=0.;
+        for(int k=0;k<3;k++){ float fk=float(k);
+          float hem=.16+.13*fk+.16*(n1(x*.6+t*1.3+fk*7.)-.5)+.05*sin(x*1.6+t*2.+fk);
+          float y=vUv.y-hem, curtain=smoothstep(-.025,.01,y)*exp(-max(y,0.)*(3.+fk));
+          float rays=.5+.5*n1(vUv.x*150.+fk*31.+t*5.)*n1(vUv.x*41.-t*2.+fk*5.);
+          float a=curtain*rays*(.95-fk*.25);
+          col+=mix(vec3(.22,1.,.6),vec3(.62,.32,.95),clamp(y*2.4+fk*.22,0.,1.))*a; acc+=a; }
+        float edge=smoothstep(0.,.2,vUv.x)*smoothstep(1.,.8,vUv.x)*smoothstep(1.,.72,vUv.y);
+        float k=edge*uAur*.85; gl_FragColor=vec4(col*k,clamp(acc,0.,1.)*k); }`,
+  }));
+  night.add(aurora);
+  const sm = (a, b, x) => { const u = Math.min(1, Math.max(0, (x - a) / (b - a))); return u * u * (3 - 2 * u); };
+
   // ---------- drifting motes
   const MOTES = reduce ? 0 : 420, mp = new Float32Array(MOTES * 3), ms = new Float32Array(MOTES), r0 = rng(7);
   for (let i = 0; i < MOTES; i++) { mp[i * 3] = (r0() - .5) * 34; mp[i * 3 + 1] = r0() * 16; mp[i * 3 + 2] = lerp(-14, 8, r0()); ms[i] = .4 + r0(); }
@@ -564,14 +644,28 @@ export function createStage(canvas, hooks = {}) {
     camera.position.x = S.px * .55;
     camera.position.y = 1.2 - S.py * .3 - S.scroll * 2.2;
     camera.lookAt(camera.position.x * .4, camera.position.y - .15, 0);
-    mountains.forEach(mn => { mn.position.y = S.scroll * lerp(3.5, 0, mn.userData.depth); });
+    mountains.forEach(mn => { mn.position.y = S.scroll * lerp(3.5, 0, mn.userData.depth) - nU.uNight.value * 3.4 * (CAM_Z - mn.position.z) / CAM_Z; });   // at night the ridges settle and open the sky
     const sk = (CAM_Z + 36) / CAM_Z;
     // down the page the sun sets: it sinks, grows a little and dims to an ember
     S.prog = damp(S.prog, S.progT, 2, dt);
-    const sr = 2.5 * sk * S.ss * (1 + S.prog * .15);
-    sun.scale.setScalar(sr);
-    sun.position.set((S.sx + .9 * S.ss) * sk, (S.sy - 1.2) * sk + 1.2 + 1.5 * S.ss * sk - S.prog * sr * .55, -36);
-    sun.material.color.copy(cRed).lerp(cDusk, S.prog);
+    const set = sm(0, .7, S.prog), sr = 2.5 * sk * S.ss * (1 + set * .15);
+    sun.scale.setScalar(sr); sun.visible = set < .999;
+    sun.position.set((S.sx + .9 * S.ss) * sk, (S.sy - 1.2) * sk + 1.2 + 1.5 * S.ss * sk - set * sr * 1.2, -36);
+    sun.material.color.copy(cRed).lerp(cDusk, set);
+    // then the night comes out
+    nU.uNight.value = sm(.55, .8, S.prog); nU.uAur.value = sm(.88, .99, S.prog); nU.uTime.value = t;
+    night.visible = nU.uNight.value > .004;
+    if (night.visible) {
+      const hh = Math.tan(THREE.MathUtils.degToRad(camera.fov / 2)) * SKYD, asp = camera.aspect, k = SKYD / CAM_Z;
+      night.position.set(camera.position.x + (camera.position.x * .4 - camera.position.x) * k, camera.position.y - .15 * k, camera.position.z - SKYD);
+      night.scale.setScalar(hh);
+      const wide = asp > 1, ds = Math.min(.5, asp * .6);
+      dip.position.set(wide ? -asp * .02 : -asp * .12, wide ? .55 : .2, 0); dip.scale.setScalar(ds);
+      dip.userData.fade.forEach((m, i) => { m.opacity = nU.uNight.value * (i === 0 ? .3 : i === 1 ? .35 : .75); });
+      const mr = sm(.55, .9, S.prog);
+      moon.position.set(wide ? asp * .52 : asp * .62, (wide ? .5 : .28) + mr * (wide ? .16 : .1), -.01); moon.scale.setScalar(wide ? .3 : .26);
+      aurora.position.set(0, .34, -.02); aurora.scale.set(asp * 2.3, .85, 1); aurora.visible = nU.uAur.value > .004;
+    }
 
     if (!S.drag) { S.spin += (S.vel + (reduce ? 0 : .13)) * dt; S.vel *= Math.exp(-1.1 * dt); }
     S.ringSpin += (reduce ? 0 : (eff() === 'bagua' ? .2 : .04)) * dt + S.vel * dt * .1;

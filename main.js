@@ -1,5 +1,5 @@
-import { Sound } from './audio.js?v=202611230750';
-import { setLang, initialLang, hint } from './i18n.js?v=202611230750';
+import { Sound } from './audio.js?v=202611230758';
+import { setLang, initialLang, hint } from './i18n.js?v=202611230758';
 
 const sound = new Sound();
 const $ = (s, r = document) => r.querySelector(s), $$ = (s, r = document) => [...r.querySelectorAll(s)];
@@ -8,7 +8,7 @@ const body = document.body;
 // ---------- 3D stage (the page works without it)
 let stage = null;
 try {
-  const { createStage } = await import('./scene.js?v=202611230750');
+  const { createStage } = await import('./scene.js?v=202611230758');
   stage = createStage($('#stage'), {
     onTrigram: i => sound.pluck(i + 2, .55),
     onSpin: v => sound.whoosh(v),
@@ -79,6 +79,7 @@ function onScroll() {
   const first = current === null; current = sec;
   const focus = sec.id === 'top' ? 'hero' : sec.id === 'wu' ? 'wu' : sec.id === 'spec' ? 'tech' : 'other';
   body.dataset.focus = focus;
+  body.dataset.end = sec.id === 'contact' ? '1' : '';
   stage?.setFocus(focus);
   if (focus === 'wu') stage?.setMode($('.art.on').dataset.mode);
   if (focus === 'tech') stage?.setTech($('.pillar.on').dataset.tech);
