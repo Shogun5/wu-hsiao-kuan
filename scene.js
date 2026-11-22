@@ -475,7 +475,7 @@ export function createStage(canvas, hooks = {}) {
   const S = {
     mode: 'taiji', form: 'xingyi', shown: '', tech: 'all', focus: 'hero', scroll: 0, mobile: false,
     mx: 0, my: 0, px: 0, py: 0, spin: 0, vel: 0, ringSpin: 0, drag: false, lastX: 0, dragMoved: 0,
-    wDisc: 1, wYY: 0, wRing: 1, wWx: 0, wArc: 1, wTrail: .55, wSignal: 0, wExo: 0, ex: innerWidth < innerHeight ? 0 : 3.7, ey: .8, es: 1, sigT: 0, sigI: 0,
+    wDisc: 1, wYY: 0, wRing: 1, wWx: 0, wArc: 1, wTrail: .55, wSignal: 0, wExo: 0, ex: innerWidth < innerHeight ? 0 : 3.7, ey: .8, es: 1, sx: innerWidth < innerHeight ? 0 : 3.7, sy: .8, ss: 1, prog: 0, progT: 0, sigT: 0, sigI: 0,
   };
   const eff = () => S.focus === 'wu' ? S.mode : S.form;      // in the 修身 section the three arts pick the figure
   const ray = new THREE.Raycaster(), ndc = new THREE.Vector2();
@@ -533,7 +533,7 @@ export function createStage(canvas, hooks = {}) {
 
   const clock = new THREE.Clock(); let running = true, time = 0;
   document.addEventListener('visibilitychange', () => { running = !document.hidden; if (running) { clock.getDelta(); tick(); } });
-  const cRed = new THREE.Color(RED), cPaper = new THREE.Color(PAPER);
+  const cRed = new THREE.Color(RED), cPaper = new THREE.Color(PAPER), cDusk = new THREE.Color(0x6e2216);
 
   function tick() {
     if (!running) return;
@@ -546,6 +546,9 @@ export function createStage(canvas, hooks = {}) {
       ts = hero ? Math.min(1.2, halfW / 2.05, halfH / 4.3) : Math.min(1.2, halfW / 2.5, halfH / 5.4); tx = 0; ty = camera.position.y + halfH * (hero ? .3 : .34); }
     else { ts = Math.min(1.6, halfW / 5, halfH / 2.75); tx = halfW * .48; ty = camera.position.y + .25; }
     if (S.focus === 'other') { ts *= .8; if (!S.mobile) tx = halfW * .66; }
+    // the sun keeps the figure's spot; in the reading sections the figure itself steps out of frame
+    S.sx = damp(S.sx, tx, 2.5, dt); S.sy = damp(S.sy, ty, 2.5, dt); S.ss = damp(S.ss, ts, 2.5, dt);
+    if (S.focus === 'other') { if (S.mobile) ty = camera.position.y + halfH * 2 + 10; else tx = halfW + 12; }
     S.ex = damp(S.ex, tx, 2.5, dt); S.ey = damp(S.ey, ty, 2.5, dt); S.es = damp(S.es, ts, 2.5, dt);
 
     const m = S.mode, k = S.tech;
@@ -563,8 +566,12 @@ export function createStage(canvas, hooks = {}) {
     camera.lookAt(camera.position.x * .4, camera.position.y - .15, 0);
     mountains.forEach(mn => { mn.position.y = S.scroll * lerp(3.5, 0, mn.userData.depth); });
     const sk = (CAM_Z + 36) / CAM_Z;
-    sun.scale.setScalar(2.5 * sk * S.es);
-    sun.position.set((S.ex + .9 * S.es) * sk, (S.ey - 1.2) * sk + 1.2 + 1.5 * S.es * sk, -36);
+    // down the page the sun sets: it sinks, grows a little and dims to an ember
+    S.prog = damp(S.prog, S.progT, 2, dt);
+    const sr = 2.5 * sk * S.ss * (1 + S.prog * .15);
+    sun.scale.setScalar(sr);
+    sun.position.set((S.sx + .9 * S.ss) * sk, (S.sy - 1.2) * sk + 1.2 + 1.5 * S.ss * sk - S.prog * sr * .55, -36);
+    sun.material.color.copy(cRed).lerp(cDusk, S.prog);
 
     if (!S.drag) { S.spin += (S.vel + (reduce ? 0 : .13)) * dt; S.vel *= Math.exp(-1.1 * dt); }
     S.ringSpin += (reduce ? 0 : (eff() === 'bagua' ? .2 : .04)) * dt + S.vel * dt * .1;
@@ -607,6 +614,7 @@ export function createStage(canvas, hooks = {}) {
     setTech(k) { S.tech = k; },
     setFocus(f) { S.focus = f; if (f !== 'wu') S.mode = 'taiji'; if (f !== 'tech') S.tech = 'all'; },
     setScroll(v) { S.scroll = v; },
+    setProgress(p) { S.progT = p; },
     pulseAll() { trigrams.forEach((g, i) => setTimeout(() => { g.userData.pulse = .8; }, i * 70)); },
     taijiSpread() { let d = 0; const cs = Math.cos(S.spin), sn = Math.sin(S.spin); for (let i = 0; i < NT; i++) { const j = i * 3; d += Math.hypot(tPos[j] - ((tHome[j] * cs - tHome[j + 1] * sn) * BS + ballC.x), tPos[j + 1] - ((tHome[j] * sn + tHome[j + 1] * cs) * BS + ballC.y), tPos[j + 2] - tHome[j + 2] * BS - ballC.z); } return d / NT; },
     state: S, angles: A, renderer,

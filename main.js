@@ -1,5 +1,5 @@
-import { Sound } from './audio.js?v=202611141211';
-import { setLang, initialLang, hint } from './i18n.js?v=202611141211';
+import { Sound } from './audio.js?v=202611230750';
+import { setLang, initialLang, hint } from './i18n.js?v=202611230750';
 
 const sound = new Sound();
 const $ = (s, r = document) => r.querySelector(s), $$ = (s, r = document) => [...r.querySelectorAll(s)];
@@ -8,7 +8,7 @@ const body = document.body;
 // ---------- 3D stage (the page works without it)
 let stage = null;
 try {
-  const { createStage } = await import('./scene.js?v=202611141211');
+  const { createStage } = await import('./scene.js?v=202611230750');
   stage = createStage($('#stage'), {
     onTrigram: i => sound.pluck(i + 2, .55),
     onSpin: v => sound.whoosh(v),
@@ -70,6 +70,7 @@ let current = null;
 function onScroll() {
   const max = document.documentElement.scrollHeight - innerHeight;
   stage?.setScroll(Math.min(1, scrollY / innerHeight));
+  stage?.setProgress(max > 0 ? Math.min(1, scrollY / max) : 0);
   const mid = innerHeight * .5;
   let sec = sections[0];
   for (const s of sections) if (s.getBoundingClientRect().top <= mid) sec = s;
