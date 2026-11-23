@@ -69,7 +69,7 @@ export function createStage(canvas, hooks = {}) {
   // ---------- night sky after sunset: a crescent moon, the Big Dipper pointing to Polaris, a faint Milky Way,
   // and aurora at the very end of the page. Laid out in units of the sky's half-height, so it fits any screen.
   const skySmall = Math.min(innerWidth, innerHeight) < 700, SKYD = CAM_Z + 40, night = new THREE.Group(); night.visible = false; scene.add(night);
-  const nU = { uNight: { value: 0 }, uAur: { value: 0 }, uTime: { value: 0 }, uPx: { value: renderer.getPixelRatio() } };
+  const nU = { uNight: { value: 0 }, uMoon: { value: 0 }, uAur: { value: 0 }, uTime: { value: 0 }, uPx: { value: renderer.getPixelRatio() } };
   const starMat = new THREE.ShaderMaterial({
     transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, uniforms: nU,
     vertexShader: `uniform float uTime,uPx,uNight; attribute float aSize; attribute float aBri; attribute float aSeed; varying float vA;
@@ -122,10 +122,10 @@ export function createStage(canvas, hooks = {}) {
   const skyVert = `varying vec2 vUv; void main(){ vUv=uv; gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.); }`;
   const moon = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), new THREE.ShaderMaterial({
     transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, uniforms: nU, vertexShader: skyVert,
-    fragmentShader: `uniform float uNight; varying vec2 vUv; void main(){ vec2 p=vUv*2.-1.; float r=length(p), w=fwidth(r)*1.5;
+    fragmentShader: `uniform float uMoon; varying vec2 vUv; void main(){ vec2 p=vUv*2.-1.; float r=length(p), w=fwidth(r)*1.5;
       float disc=1.-smoothstep(.34-w,.34+w,r), dark=1.-smoothstep(.33-w,.33+w,length(p-vec2(-.15,.06)));
       float lit=disc*(1.-dark*.93), glow=exp(-r*r*7.)*.28;
-      vec3 c=vec3(.97,.94,.85); float a=(lit+glow)*uNight; gl_FragColor=vec4(c*a,a); }`,
+      vec3 c=vec3(.97,.94,.85); float a=(lit+glow)*uMoon; gl_FragColor=vec4(c*a,a); }`,
   }));
   night.add(moon);
   const aurora = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), new THREE.ShaderMaterial({
@@ -654,7 +654,9 @@ export function createStage(canvas, hooks = {}) {
     sun.material.color.copy(cRed).lerp(cDusk, set);
     // then the night comes out
     nU.uNight.value = sm(.55, .8, S.prog); nU.uAur.value = sm(.88, .99, S.prog); nU.uTime.value = t;
-    night.visible = nU.uNight.value > .004;
+    // the moon rises from behind the ridge in 理念, while the sun is still going down
+    const rise = sm(.17, .32, S.prog); nU.uMoon.value = sm(.15, .24, S.prog) * (.8 + .2 * nU.uNight.value);
+    night.visible = nU.uNight.value > .004 || nU.uMoon.value > .004;
     if (night.visible) {
       const hh = Math.tan(THREE.MathUtils.degToRad(camera.fov / 2)) * SKYD, asp = camera.aspect, k = SKYD / CAM_Z;
       night.position.set(camera.position.x + (camera.position.x * .4 - camera.position.x) * k, camera.position.y - .15 * k, camera.position.z - SKYD);
@@ -662,8 +664,9 @@ export function createStage(canvas, hooks = {}) {
       const wide = asp > 1, ds = Math.min(.5, asp * .6);
       dip.position.set(wide ? -asp * .02 : -asp * .12, wide ? .55 : .2, 0); dip.scale.setScalar(ds);
       dip.userData.fade.forEach((m, i) => { m.opacity = nU.uNight.value * (i === 0 ? .3 : i === 1 ? .35 : .75); });
-      const mr = sm(.55, .9, S.prog);
-      moon.position.set(wide ? asp * .52 : asp * .62, (wide ? .5 : .28) + mr * (wide ? .16 : .1), -.01); moon.scale.setScalar(wide ? .3 : .26);
+      const drift = sm(.45, 1, S.prog);   // from where it rose to its place in the night sky
+      moon.position.set(lerp(wide ? asp * .3 : asp * .45, wide ? asp * .52 : asp * .62, drift),
+        lerp(lerp(wide ? .45 : .3, wide ? .84 : .72, rise), wide ? .66 : .38, drift), -.01); moon.scale.setScalar(wide ? .42 : .38);
       aurora.position.set(0, .34, -.02); aurora.scale.set(asp * 2.3, .85, 1); aurora.visible = nU.uAur.value > .004;
     }
 
