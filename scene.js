@@ -40,14 +40,14 @@ export function createStage(canvas, hooks = {}) {
   for (let i = 0; i < LAYERS; i++) {
     const t = i / (LAYERS - 1);
     const z = lerp(-34, -6.5, t), k = (CAM_Z - z) / CAM_Z;
-    const W = 34 * k, N = 260, f = fbm1(101 + i * 37);
+    const W = 46 * k, N = 300, f = fbm1(101 + i * 37), freq = lerp(5, 9, t) * 46 / 34;   // wide enough to stay full as the ranges move
     const top = lerp(.9, -2.5, t), amp = lerp(3.4, 1.3, t), foot = -6.5;
     const cTop = new THREE.Color(0x56605b).lerp(new THREE.Color(0x070908), Math.pow(t, .7));
     const cBot = new THREE.Color(0x2c322f).lerp(new THREE.Color(0x0e1110), t);
     const pos = [], col = [], idx = [], ridge = [];
     for (let j = 0; j <= N; j++) {
       const u = j / N, x = (u - .5) * W;
-      const h = Math.pow(f(u * lerp(5, 9, t) + i * 3.1), 1.7), y = (top + h * amp) * k;
+      const h = Math.pow(f(u * freq + i * 3.1), 1.7), y = (top + h * amp) * k;
       pos.push(x, y, 0, x, foot * k, 0); ridge.push(V(x, y, .01));
       col.push(cTop.r, cTop.g, cTop.b, cBot.r, cBot.g, cBot.b);
       if (j < N) { const a = j * 2; idx.push(a, a + 1, a + 2, a + 1, a + 3, a + 2); }
@@ -57,10 +57,20 @@ export function createStage(canvas, hooks = {}) {
     g.setAttribute('color', new THREE.Float32BufferAttribute(col, 3));
     g.setIndex(idx);
     const m = new THREE.Mesh(g, new THREE.MeshBasicMaterial({ vertexColors: true }));
-    m.position.z = z; m.userData.depth = t;
-    if (i === 1 || i === 3) m.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(ridge),
-      new THREE.LineBasicMaterial({ color: TECH, transparent: true, opacity: i === 1 ? .28 : .16 })));
+    m.position.z = z; m.frustumCulled = false; m.userData = { depth: t, z0: z, f, i, top, amp, k, N, freq, line: null };
+    if (i === 1 || i === 3) { const ln = new THREE.Line(new THREE.BufferGeometry().setFromPoints(ridge),
+      new THREE.LineBasicMaterial({ color: TECH, transparent: true, opacity: i === 1 ? .28 : .16 })); ln.frustumCulled = false; m.add(ln); m.userData.line = ln; }
     scene.add(m); mountains.push(m);
+  }
+  // as the page scrolls the ridgelines travel past, the near ranges faster than the far ones (parallax)
+  function shapeRidge(mn) {
+    const d = mn.userData, p = mn.geometry.attributes.position.array, lp = d.line && d.line.geometry.attributes.position.array;
+    const off = S.prog * lerp(1.2, 5, d.depth);
+    for (let j = 0; j <= d.N; j++) {
+      const y = (d.top + Math.pow(d.f(j / d.N * d.freq + d.i * 3.1 + off), 1.7) * d.amp) * d.k;
+      p[j * 6 + 1] = y; if (lp) lp[j * 3 + 1] = y;
+    }
+    mn.geometry.attributes.position.needsUpdate = true; if (lp) d.line.geometry.attributes.position.needsUpdate = true;
   }
 
   const sun = new THREE.Mesh(new THREE.CircleGeometry(1, 96), new THREE.MeshBasicMaterial({ color: RED }));
@@ -555,7 +565,7 @@ export function createStage(canvas, hooks = {}) {
   const S = {
     mode: 'taiji', form: 'xingyi', shown: '', tech: 'all', focus: 'hero', scroll: 0, mobile: false,
     mx: 0, my: 0, px: 0, py: 0, spin: 0, vel: 0, ringSpin: 0, drag: false, lastX: 0, dragMoved: 0,
-    wDisc: 1, wYY: 0, open: 0, wRing: 1, wWx: 0, wArc: 1, wTrail: .55, wSignal: 0, wExo: 0, ex: innerWidth < innerHeight ? 0 : 3.7, ey: .8, es: 1, sx: innerWidth < innerHeight ? 0 : 3.7, sy: .8, ss: 1, prog: 0, progT: 0, sigT: 0, sigI: 0,
+    wDisc: 1, wYY: 0, open: 0, lastTravel: -1, wRing: 1, wWx: 0, wArc: 1, wTrail: .55, wSignal: 0, wExo: 0, ex: innerWidth < innerHeight ? 0 : 3.7, ey: .8, es: 1, sx: innerWidth < innerHeight ? 0 : 3.7, sy: .8, ss: 1, prog: 0, progT: 0, sigT: 0, sigI: 0,
   };
   const eff = () => S.focus === 'wu' ? S.mode : S.form;      // in the 修身 section the three arts pick the figure
   const ray = new THREE.Raycaster(), ndc = new THREE.Vector2();
@@ -644,7 +654,13 @@ export function createStage(canvas, hooks = {}) {
     camera.position.x = S.px * .55;
     camera.position.y = 1.2 - S.py * .3 - S.scroll * 2.2;
     camera.lookAt(camera.position.x * .4, camera.position.y - .15, 0);
-    mountains.forEach(mn => { mn.position.y = S.scroll * lerp(3.5, 0, mn.userData.depth) - S.open * 3.4 * (CAM_Z - mn.position.z) / CAM_Z; });   // after moonset the ridges settle and open the sky
+    // the journey: ranges slide past, draw closer through the middle of the page, then fall back to open the night sky
+    if (Math.abs(S.prog - S.lastTravel) > 2e-4) { S.lastTravel = S.prog; mountains.forEach(shapeRidge); }
+    const near = sm(.08, .42, S.prog) * 2.6 - sm(.46, .78, S.prog) * 6;
+    mountains.forEach(mn => {
+      const d = mn.userData.depth; mn.position.z = mn.userData.z0 + near * lerp(.35, .7, d);
+      mn.position.y = S.scroll * lerp(3.5, 0, d) - S.open * 3.4 * (CAM_Z - mn.position.z) / CAM_Z;
+    });
     const sk = (CAM_Z + 36) / CAM_Z;
     // down the page the sun sets: it sinks, grows a little and dims to an ember
     S.prog = damp(S.prog, S.progT, 2, dt);
