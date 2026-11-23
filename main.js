@@ -1,5 +1,5 @@
-import { Sound } from './audio.js?v=202611230805';
-import { setLang, initialLang, hint } from './i18n.js?v=202611230805';
+import { Sound } from './audio.js?v=202611230815';
+import { setLang, initialLang, hint } from './i18n.js?v=202611230815';
 
 const sound = new Sound();
 const $ = (s, r = document) => r.querySelector(s), $$ = (s, r = document) => [...r.querySelectorAll(s)];
@@ -8,7 +8,7 @@ const body = document.body;
 // ---------- 3D stage (the page works without it)
 let stage = null;
 try {
-  const { createStage } = await import('./scene.js?v=202611230805');
+  const { createStage } = await import('./scene.js?v=202611230815');
   stage = createStage($('#stage'), {
     onTrigram: i => sound.pluck(i + 2, .55),
     onSpin: v => sound.whoosh(v),

@@ -555,7 +555,7 @@ export function createStage(canvas, hooks = {}) {
   const S = {
     mode: 'taiji', form: 'xingyi', shown: '', tech: 'all', focus: 'hero', scroll: 0, mobile: false,
     mx: 0, my: 0, px: 0, py: 0, spin: 0, vel: 0, ringSpin: 0, drag: false, lastX: 0, dragMoved: 0,
-    wDisc: 1, wYY: 0, wRing: 1, wWx: 0, wArc: 1, wTrail: .55, wSignal: 0, wExo: 0, ex: innerWidth < innerHeight ? 0 : 3.7, ey: .8, es: 1, sx: innerWidth < innerHeight ? 0 : 3.7, sy: .8, ss: 1, prog: 0, progT: 0, sigT: 0, sigI: 0,
+    wDisc: 1, wYY: 0, open: 0, wRing: 1, wWx: 0, wArc: 1, wTrail: .55, wSignal: 0, wExo: 0, ex: innerWidth < innerHeight ? 0 : 3.7, ey: .8, es: 1, sx: innerWidth < innerHeight ? 0 : 3.7, sy: .8, ss: 1, prog: 0, progT: 0, sigT: 0, sigI: 0,
   };
   const eff = () => S.focus === 'wu' ? S.mode : S.form;      // in the 修身 section the three arts pick the figure
   const ray = new THREE.Raycaster(), ndc = new THREE.Vector2();
@@ -644,29 +644,31 @@ export function createStage(canvas, hooks = {}) {
     camera.position.x = S.px * .55;
     camera.position.y = 1.2 - S.py * .3 - S.scroll * 2.2;
     camera.lookAt(camera.position.x * .4, camera.position.y - .15, 0);
-    mountains.forEach(mn => { mn.position.y = S.scroll * lerp(3.5, 0, mn.userData.depth) - nU.uNight.value * 3.4 * (CAM_Z - mn.position.z) / CAM_Z; });   // at night the ridges settle and open the sky
+    mountains.forEach(mn => { mn.position.y = S.scroll * lerp(3.5, 0, mn.userData.depth) - S.open * 3.4 * (CAM_Z - mn.position.z) / CAM_Z; });   // after moonset the ridges settle and open the sky
     const sk = (CAM_Z + 36) / CAM_Z;
     // down the page the sun sets: it sinks, grows a little and dims to an ember
     S.prog = damp(S.prog, S.progT, 2, dt);
-    const set = sm(0, .7, S.prog), sr = 2.5 * sk * S.ss * (1 + set * .15);
+    const set = sm(0, .3, S.prog), sr = 2.5 * sk * S.ss * (1 + set * .15);
     sun.scale.setScalar(sr); sun.visible = set < .999;
     sun.position.set((S.sx + .9 * S.ss) * sk, (S.sy - 1.2) * sk + 1.2 + 1.5 * S.ss * sk - set * sr * 1.2, -36);
     sun.material.color.copy(cRed).lerp(cDusk, set);
     // then the night comes out
-    nU.uNight.value = sm(.55, .8, S.prog); nU.uAur.value = sm(.88, .99, S.prog); nU.uTime.value = t;
-    // the moon rises from behind the ridge in 理念, while the sun is still going down
-    const rise = sm(.17, .32, S.prog); nU.uMoon.value = sm(.15, .24, S.prog) * (.8 + .2 * nU.uNight.value);
-    night.visible = nU.uNight.value > .004 || nU.uMoon.value > .004;
+    // then one act at a time: the moon rises in 理念, the stars come out as it fades, the aurora takes over at the end
+    const rise = sm(.2, .34, S.prog);
+    nU.uMoon.value = sm(.18, .28, S.prog) * (1 - sm(.56, .66, S.prog));
+    nU.uNight.value = sm(.54, .66, S.prog) * (1 - sm(.8, .88, S.prog));
+    nU.uAur.value = sm(.82, .93, S.prog); nU.uTime.value = t;
+    S.open = sm(.5, .66, S.prog);
+    night.visible = nU.uNight.value > .004 || nU.uMoon.value > .004 || nU.uAur.value > .004;
     if (night.visible) {
       const hh = Math.tan(THREE.MathUtils.degToRad(camera.fov / 2)) * SKYD, asp = camera.aspect, k = SKYD / CAM_Z;
       night.position.set(camera.position.x + (camera.position.x * .4 - camera.position.x) * k, camera.position.y - .15 * k, camera.position.z - SKYD);
       night.scale.setScalar(hh);
       const wide = asp > 1, ds = Math.min(.5, asp * .6);
-      dip.position.set(wide ? -asp * .02 : -asp * .12, wide ? .55 : .2, 0); dip.scale.setScalar(ds);
+      dip.position.set(wide ? -asp * .02 : -asp * .1, wide ? .55 : .42, 0); dip.scale.setScalar(ds);
       dip.userData.fade.forEach((m, i) => { m.opacity = nU.uNight.value * (i === 0 ? .3 : i === 1 ? .35 : .75); });
-      const drift = sm(.45, 1, S.prog);   // from where it rose to its place in the night sky
-      moon.position.set(lerp(wide ? asp * .3 : asp * .45, wide ? asp * .52 : asp * .62, drift),
-        lerp(lerp(wide ? .45 : .3, wide ? .84 : .72, rise), wide ? .66 : .38, drift), -.01); moon.scale.setScalar(wide ? .42 : .38);
+      moon.visible = nU.uMoon.value > .004;
+      moon.position.set(wide ? asp * .3 : asp * .45, lerp(wide ? .45 : .3, wide ? .84 : .72, rise) + .06 * sm(.34, .6, S.prog), -.01); moon.scale.setScalar(wide ? .42 : .38);
       aurora.position.set(0, .34, -.02); aurora.scale.set(asp * 2.3, .85, 1); aurora.visible = nU.uAur.value > .004;
     }
 
@@ -679,6 +681,10 @@ export function createStage(canvas, hooks = {}) {
     wxNodes.forEach(n => { n.rotation.z = -wuxing.rotation.z; }); if (wuxing.visible) updateWuxing(t, dt);
     trigrams.forEach(g => { const u = g.userData; if (u.pulse > 0 || !u.mat.color.equals(cPaper)) { u.pulse = Math.max(0, u.pulse - dt * .9); u.mat.color.copy(cPaper).lerp(cRed, u.pulse); g.scale.setScalar(1 + u.pulse * .16); } });
 
+    // out of frame (reading sections) the figure and everything round it are not simulated or drawn at all
+    const away = S.focus === 'other' && (S.mobile ? S.ey > camera.position.y + halfH + 4 : S.ex > halfW + 4);
+    emblem.visible = !away;
+    if (!away) {
     pose(t);
     updateTaiji(dt);
     arcKnee.visible = arcSh.visible = S.wArc > .5;
@@ -692,6 +698,7 @@ export function createStage(canvas, hooks = {}) {
     sigGeo.attributes.position.needsUpdate = true;
 
     updatePulses(dt);
+    }
     gU.uTime.value = t; gU.uSpin.value = S.spin; gU.uEnergy.value = S.wSignal;
     if (gU.uBurst.value < 1.5) gU.uBurst.value += dt * .7;
 
